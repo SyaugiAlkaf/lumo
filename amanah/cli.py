@@ -12,6 +12,8 @@ from amanah.db.connection import connect
 from amanah.db.repo import Repo
 from amanah.llm.llama_server import LlamaServerProvider
 from amanah.llm.mock import MockProvider
+from amanah.monitor.events import EventBus
+from amanah.monitor.webhooks import build_webhooks
 from amanah.oracle.adapter import build_oracle
 
 EXIT_PROPOSED = 0
@@ -58,13 +60,18 @@ def main(argv: list[str] | None = None) -> int:
             seed.seed(conn)
             print(f"initialized {config.db_path}")
             return EXIT_PROPOSED
+        bus = EventBus(enabled=config.monitoring)
+        hooks = build_webhooks(config)
+        if hooks:
+            bus.subscribe(hooks)
+        repo = Repo(conn, bus=bus)
+
         if args.command == "propose":
             invoice_text = args.invoice.read_text()
-            result = pipeline.run(invoice_text, Repo(conn), build_provider(config), config)
+            result = pipeline.run(invoice_text, repo, build_provider(config), config)
             print(json.dumps(result.model_dump(), indent=2))
             return EXIT_PROPOSED if result.decision == "proposed" else EXIT_REFUSED
 
-        repo = Repo(conn)
         client = build_chain_adapter(config)
         if args.command == "execute":
             chain_id = flow.execute(repo, client, args.intent_id, config.sme_source, config)

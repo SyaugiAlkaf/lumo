@@ -172,6 +172,15 @@ def run_guards(guards: list[Guard], ctx: GuardContext) -> tuple[str, list[str]]:
         if not guard.enabled or guard.stage != ctx.stage:
             continue
         result = guard.check(ctx)
+        if result.outcome != "pass":
+            ctx.repo.emit(
+                "guard.tripped",
+                name=type(guard).__name__,
+                outcome=result.outcome,
+                codes=result.codes,
+            )
+            if isinstance(guard, InjectionGuard):
+                ctx.repo.emit("injection.blocked", codes=result.codes)
         if result.outcome == "refuse":
             refused = True
         elif result.outcome == "hold":

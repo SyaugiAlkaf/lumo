@@ -4,8 +4,17 @@ from dataclasses import dataclass
 
 from amanah.db import ulid
 from amanah.models import IntentDraft, PriorIntent
+from amanah.monitor.events import Event, EventBus
 
 DECISIONS = ("proposed", "held", "approved", "refused", "reverted")
+
+DECISION_EVENTS = {
+    "proposed": "intent.proposed",
+    "held": "intent.held",
+    "refused": "intent.refused",
+    "approved": "intent.escrowed",
+    "reverted": "intent.reverted",
+}
 
 
 @dataclass
@@ -15,8 +24,24 @@ class DecisionOutcome:
 
 
 class Repo:
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, bus: EventBus | None = None):
         self.conn = conn
+        self.bus = bus or EventBus()
+
+    def emit(self, name: str, /, **payload) -> None:
+        if not self.bus.enabled:
+            return
+        self.conn.execute(
+            "INSERT INTO events (id, name, payload) VALUES (?, ?, ?)",
+            (ulid.new(), name, json.dumps(payload)),
+        )
+        self.conn.commit()
+        self.bus.publish(Event(name=name, payload=payload))
+
+    def events(self, limit: int = 100) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM events ORDER BY rowid DESC LIMIT ?", (limit,)
+        ).fetchall()
 
     def add_supplier(self, name: str, address: str) -> str:
         supplier_id = ulid.new()
@@ -82,6 +107,7 @@ class Repo:
             "UPDATE intents SET status = 'released' WHERE id = ?", (intent_id,)
         )
         self.conn.commit()
+        self.emit("intent.released", intent_id=intent_id)
 
     def add_chain_tx(self, intent_id: str, action: str, tx_hash: str | None) -> None:
         self.conn.execute(
@@ -188,4 +214,11 @@ class Repo:
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (decision_id, decision, json.dumps(codes), request_hash, intent_id, detail),
             )
+        self.emit(
+            DECISION_EVENTS[decision],
+            decision_id=decision_id,
+            intent_id=intent_id,
+            request_hash=request_hash,
+            codes=codes,
+        )
         return DecisionOutcome(decision_id=decision_id, intent_id=intent_id)

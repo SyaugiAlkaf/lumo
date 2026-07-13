@@ -33,4 +33,7 @@ def sync_status(repo: Repo, client: ChainAdapter, intent_id: str) -> str:
             request_hash=row["request_hash"],
             intent_id=intent_id,
         )
+        repo.emit(
+            "intent.refunded", intent_id=intent_id, request_hash=row["request_hash"]
+        )
     return mapped

@@ -32,6 +32,8 @@ class Config:
     human_cosign_threshold: int = 0
     proof_of_compute: bool = False
     dry_run: bool = False
+    monitoring: bool = True
+    webhook_urls: str = ""
 
     @classmethod
     def from_file(cls, path: str | Path) -> "Config":

@@ -3,12 +3,19 @@ import sqlite3
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from amanah.monitor import metrics
+
 INDEX = Path(__file__).parent / "index.html"
 
 
-def read_state(db_path: str) -> dict:
+def connect_ro(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
+    return conn
+
+
+def read_state(db_path: str) -> dict:
+    conn = connect_ro(db_path)
     try:
         state = {
             "suppliers": [dict(r) for r in conn.execute("SELECT * FROM suppliers")],
@@ -40,20 +47,54 @@ def read_state(db_path: str) -> dict:
     return state
 
 
+def read_events(db_path: str, limit: int = 100) -> list[dict]:
+    conn = connect_ro(db_path)
+    try:
+        return [
+            {
+                "name": r["name"],
+                "payload": json.loads(r["payload"]),
+                "created_at": r["created_at"],
+            }
+            for r in conn.execute(
+                "SELECT * FROM events ORDER BY rowid DESC LIMIT ?", (limit,)
+            )
+        ]
+    finally:
+        conn.close()
+
+
+def read_metrics(db_path: str) -> dict:
+    conn = connect_ro(db_path)
+    try:
+        return metrics.snapshot(conn)
+    finally:
+        conn.close()
+
+
 class StateHandler(BaseHTTPRequestHandler):
     db_path = "amanah.db"
 
     def do_GET(self):
-        if self.path == "/api/state":
-            try:
-                body = json.dumps(read_state(self.db_path)).encode()
-                self._reply(200, "application/json", body)
-            except sqlite3.Error as exc:
-                self._reply(500, "application/json", json.dumps({"error": str(exc)}).encode())
-        elif self.path in ("/", "/index.html"):
-            self._reply(200, "text/html; charset=utf-8", INDEX.read_bytes())
-        else:
-            self._reply(404, "text/plain", b"not found")
+        try:
+            if self.path == "/api/state":
+                self._json(read_state(self.db_path))
+            elif self.path == "/api/events":
+                self._json(read_events(self.db_path))
+            elif self.path == "/api/metrics":
+                self._json(read_metrics(self.db_path))
+            elif self.path == "/metrics":
+                body = metrics.render_prometheus(read_metrics(self.db_path)).encode()
+                self._reply(200, "text/plain; version=0.0.4; charset=utf-8", body)
+            elif self.path in ("/", "/index.html"):
+                self._reply(200, "text/html; charset=utf-8", INDEX.read_bytes())
+            else:
+                self._reply(404, "text/plain", b"not found")
+        except sqlite3.Error as exc:
+            self._reply(500, "application/json", json.dumps({"error": str(exc)}).encode())
+
+    def _json(self, data):
+        self._reply(200, "application/json", json.dumps(data).encode())
 
     def _reply(self, code: int, ctype: str, body: bytes):
         self.send_response(code)
