@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# scripts/landing_check.sh — asserts the public landing page exists, is fully
-# self-contained (no external http(s) assets or links), carries every required
-# section, and is responsive. Exit 0 only if all checks pass.
+# scripts/landing_check.sh — asserts the public landing page exists, is
+# self-contained (no external http(s) assets; nav hrefs only to the explorer
+# and the repo), carries every required section, and is responsive.
+# Exit 0 only if all checks pass.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,22 +26,37 @@ if [ ! -f "$PAGE" ]; then
 fi
 check "site/index.html exists" 0
 
-EXTERNAL="$(grep -nE '(src|href)[[:space:]]*=[[:space:]]*["'\'']https?://|url\([[:space:]]*["'\'']?https?://|fetch\([[:space:]]*["'\'']?https?://|@import' "$PAGE" || true)"
-if [ -n "$EXTERNAL" ]; then
-    echo "$EXTERNAL"
-    check "self-contained: no external http(s) src/href/url()/fetch/@import" 1
+EXTERNAL_ASSETS="$(grep -nE 'src[[:space:]]*=[[:space:]]*["'\'']https?://|url\([[:space:]]*["'\'']?https?://|fetch\([[:space:]]*["'\'']?https?://|@import' "$PAGE" || true)"
+if [ -n "$EXTERNAL_ASSETS" ]; then
+    echo "$EXTERNAL_ASSETS"
+    check "self-contained: no external http(s) src/url()/fetch/@import" 1
 else
-    check "self-contained: no external http(s) src/href/url()/fetch/@import" 0
+    check "self-contained: no external http(s) src/url()/fetch/@import" 0
+fi
+
+STRAY_HREFS="$(grep -oE 'href[[:space:]]*=[[:space:]]*["'\'']https?://[^"'\'']*' "$PAGE" \
+    | grep -vE 'https?://(stellar\.expert/explorer/testnet/|github\.com/)' || true)"
+if [ -n "$STRAY_HREFS" ]; then
+    echo "$STRAY_HREFS"
+    check "external hrefs limited to stellar.expert testnet + github.com" 1
+else
+    check "external hrefs limited to stellar.expert testnet + github.com" 0
 fi
 
 grep -q 'name="viewport"' "$PAGE"; check "viewport meta present (responsive)" $?
 
-for marker in 'id="hero"' 'id="problem"' 'id="how"' 'id="demo"' 'id="platform"' 'id="proof"' '<footer'; do
+for marker in 'id="hero"' 'id="trust"' 'id="anywhere"' 'id="before-after"' 'id="proof"' '<footer'; do
     grep -qF "$marker" "$PAGE"; check "section marker $marker" $?
 done
 
 grep -q 'prefers-color-scheme' "$PAGE"; check "light + dark theme aware" $?
-grep -qF 'The agent can be tricked' "$PAGE"; check "headline present" $?
+grep -qF 'The agent reads.' "$PAGE"; check "tagline present" $?
+grep -qF 'CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK' "$PAGE"; check "escrow contract link" $?
+grep -qF 'CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS' "$PAGE"; check "policy-account contract link" $?
+grep -qF '0b5d14a535d0fd7ae03b40eccf14205c042d606c4c2c0675ef0ce47265956f4f' "$PAGE"; check "release tx link" $?
+grep -qF 'href="/testnet"' "$PAGE"; check "testnet tester link" $?
+grep -qF 'github.com/SyaugiAlkaf/amanah' "$PAGE"; check "repo link" $?
+grep -qE 'S[A-Z0-9]{55}' "$PAGE" && SECRET=1 || SECRET=0; check "no Stellar secret seed on page" "$SECRET"
 
 if [ "$FAIL" = 0 ]; then
     echo "PASS landing_check"
