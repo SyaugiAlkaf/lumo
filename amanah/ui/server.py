@@ -3,10 +3,13 @@ import sqlite3
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from amanah import testtool
+from amanah.chain import ChainError
 from amanah.config import PROFILES, Config
 from amanah.monitor import metrics
 
 INDEX = Path(__file__).parent / "index.html"
+TESTNET = Path(__file__).parent / "testnet.html"
 
 TRUST_FLAGS = (
     "injection_scan",
@@ -94,8 +97,40 @@ def read_metrics(db_path: str) -> dict:
         conn.close()
 
 
+def read_testnet_info(db_path: str, config: Config) -> dict:
+    conn = connect_ro(db_path)
+    try:
+        rules = {
+            r["key"]: r["value"] for r in conn.execute("SELECT * FROM policy_rules")
+        }
+        suppliers = [
+            {"name": r["name"], "address": r["address"]}
+            for r in conn.execute("SELECT name, address FROM suppliers ORDER BY name")
+        ]
+    finally:
+        conn.close()
+    return {
+        "network": config.network,
+        "chain_adapter": config.chain_adapter,
+        "escrow_id": config.escrow_id,
+        "token": rules.get("token_address", ""),
+        "sme_address": rules.get("sme_address", ""),
+        "cap_per_tx": rules.get("cap_per_tx", ""),
+        "suppliers": suppliers,
+    }
+
+
 class StateHandler(BaseHTTPRequestHandler):
     db_path = "amanah.db"
+    config: Config | None = None
+    chain_adapter = None
+
+    def _config(self) -> Config:
+        if type(self).config is not None:
+            return type(self).config
+        config = Config.from_env()
+        config.db_path = self.db_path
+        return config
 
     def do_GET(self):
         try:
@@ -110,10 +145,40 @@ class StateHandler(BaseHTTPRequestHandler):
                 self._reply(200, "text/plain; version=0.0.4; charset=utf-8", body)
             elif self.path in ("/", "/index.html"):
                 self._reply(200, "text/html; charset=utf-8", INDEX.read_bytes())
+            elif self.path == "/testnet":
+                self._reply(200, "text/html; charset=utf-8", TESTNET.read_bytes())
+            elif self.path == "/testnet/info":
+                self._json(read_testnet_info(self.db_path, self._config()))
             else:
                 self._reply(404, "text/plain", b"not found")
         except sqlite3.Error as exc:
             self._reply(500, "application/json", json.dumps({"error": str(exc)}).encode())
+
+    def do_POST(self):
+        if self.path != "/testnet/run":
+            return self._reply(404, "text/plain", b"not found")
+        length = int(self.headers.get("Content-Length", 0))
+        raw = self.rfile.read(length)
+        try:
+            body = json.loads(raw) if raw else {}
+        except json.JSONDecodeError as exc:
+            return self._error(400, str(exc))
+        invoice_text = body.get("invoice_text") if isinstance(body, dict) else None
+        if not isinstance(invoice_text, str) or not invoice_text.strip():
+            return self._error(400, "invoice_text (string) is required")
+        try:
+            self._json(
+                testtool.run_invoice(
+                    invoice_text, self._config(), adapter=type(self).chain_adapter
+                )
+            )
+        except ChainError as exc:
+            self._error(502, str(exc))
+        except Exception as exc:
+            self._error(500, str(exc))
+
+    def _error(self, code: int, message: str):
+        self._reply(code, "application/json", json.dumps({"error": message}).encode())
 
     def _json(self, data):
         self._reply(200, "application/json", json.dumps(data).encode())
