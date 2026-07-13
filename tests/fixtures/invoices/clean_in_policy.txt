@@ -1,0 +1,6 @@
+INVOICE INV-2026-0042
+From: CV Batik Nusantara
+Payment address: GBATIKYLX7IEOR2YJMNTPMKZCIWXT2PAX635P7ZDGB3DTLQLS263VNS3
+Amount due: 1,250.00 USDC
+Due: 2026-07-20
+Memo: 40 bolts hand-stamped batik tulis, order PO-118

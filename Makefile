@@ -1,12 +1,19 @@
 WASM_DIR := contracts/target/wasm32v1-none/release
 
-.PHONY: gate-p0 gate-p1 build spec
+.PHONY: gate-p0 gate-p1 gate-p2 live-check build spec
 
 gate-p0:
 	acceptance/acceptance.sh --gate P0
 
 gate-p1:
 	acceptance/acceptance.sh --gate P1
+
+gate-p2:
+	acceptance/acceptance.sh --gate P2
+
+live-check:
+	@test -n "$$AMANAH_LLAMA_URL" || { echo "set AMANAH_LLAMA_URL to the llama-server base URL"; exit 1; }
+	.venv/bin/python -m pytest tests/test_llm_live.py -q
 
 build:
 	cd contracts && stellar contract build

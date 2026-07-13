@@ -92,9 +92,42 @@ gate_p1() {
     echo "GATE P1: PASS (T4 + T5 green)"
 }
 
+gate_p2() {
+    echo "== Amanah acceptance :: gate P2 (on-device agent, MockProvider only) =="
+    local py="$ROOT/.venv/bin/python"
+    [ -x "$py" ] || py="$(command -v python3 || true)"
+    [ -n "$py" ] && "$py" -c "import pytest, pydantic, httpx" >/dev/null 2>&1 \
+        || { echo "prefetch missing: python deps (pytest/pydantic/httpx) — create .venv"; echo "GATE P2: BLOCKED (prefetch)"; exit 3; }
+
+    local test_log test_rc
+    test_log="$(mktemp)"
+    trap 'rm -f "$test_log"' RETURN
+
+    echo "-- pytest tests/ -k 'not live' --"
+    set +e
+    ( cd "$ROOT" && "$py" -m pytest tests/ -k "not live" -q ) >"$test_log" 2>&1
+    test_rc=$?
+    set -e
+    cat "$test_log"
+    assert_pytest_passed "$PYTEST_EXPECTED_PASS" "$test_log" || { echo "GATE P2: FAIL"; exit 1; }
+    [ "$test_rc" -eq 0 ] || { echo "GATE P2: FAIL (pytest exit $test_rc)"; exit 1; }
+
+    echo
+    echo "== T-matrix =="
+    marker T6 GREEN "in-policy invoice -> PROPOSE, tx-plan matches escrow binding"
+    marker T7 GREEN "over-cap / unknown-supplier / duplicate -> REFUSE, no tx"
+    marker T8 GREEN "5 inject fixtures + COMPROMISED mock refused; clean control passes"
+    marker T9 GREEN "record_decision chokepoint: one audit row per decision state"
+    marker T10 RED  "e2e quickstart happy+failure+anchor -> P3 (shell)"
+    echo
+    echo "GATE P2: PASS (T6-T9 green; T10 red as expected)"
+    echo "NOTE: live-model check is human-triggered: make live-check (never a loop gate)"
+}
+
 case "$GATE" in
     P0) gate_p0 ;;
     P1) gate_p1 ;;
-    "") echo "usage: acceptance.sh --gate P0|P1" >&2; exit 2 ;;
+    P2) gate_p2 ;;
+    "") echo "usage: acceptance.sh --gate P0|P1|P2" >&2; exit 2 ;;
     *)  echo "gate '$GATE' not implemented" >&2; exit 2 ;;
 esac

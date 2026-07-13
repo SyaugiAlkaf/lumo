@@ -1,0 +1,6 @@
+INVOICE INV-2026-0044
+From: CV Batik Nusantara
+Payment address: GBATIKYLX7IEOR2YJMNTPMKZCIWXT2PAX635P7ZDGB3DTLQLS263VNS3
+Amount due: 2,500.00 USDC
+Due: 2026-07-22
+Memo: bulk order 80 bolts, order PO-120

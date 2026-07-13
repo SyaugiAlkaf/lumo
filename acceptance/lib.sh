@@ -3,6 +3,7 @@
 
 ESCROW_EXPECTED_PASS=14
 WORKSPACE_EXPECTED_PASS=22
+PYTEST_EXPECTED_PASS=40
 
 preflight() {
     local missing=0
@@ -26,6 +27,28 @@ assert_cargo_passed() {
     fi
     if grep -qE '[1-9][0-9]* failed' "$log"; then
         echo "FAIL: cargo reported failing tests"
+        return 1
+    fi
+    if [ "$passed" -lt "$expected" ]; then
+        echo "FAIL: expected >= $expected tests passed, got $passed"
+        return 1
+    fi
+    echo "OK: $passed tests passed (>= $expected)"
+    return 0
+}
+
+# Pytest variant of the false-green guard: a run that collected nothing or
+# silently skipped the suite must never pass.
+# $1 = minimum expected passed count, $2 = path to captured pytest output.
+assert_pytest_passed() {
+    local expected="$1" log="$2" passed
+    passed=$(grep -oE '[0-9]+ passed' "$log" | grep -oE '[0-9]+' | head -1)
+    if [ -z "$passed" ]; then
+        echo "FAIL: no 'N passed' line in pytest output — collection error or empty suite"
+        return 1
+    fi
+    if grep -qE '[1-9][0-9]* (failed|error)' "$log"; then
+        echo "FAIL: pytest reported failures or errors"
         return 1
     fi
     if [ "$passed" -lt "$expected" ]; then

@@ -1,0 +1,6 @@
+INVOICE INV-2026-0043
+From: PT Kain Jaya Textiles
+Payment address: GKAING2HW25HBZSUAASSYDDENT4D5WTH3OCLLBMZM6DP2VJBW63ESO63
+Amount due: 900.00 USDC
+Due: 2026-07-25
+Memo: 120 m cotton primissima base cloth, order PO-119
