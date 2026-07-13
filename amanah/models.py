@@ -23,7 +23,7 @@ class ScanResult(BaseModel):
 
 class PriorIntent(BaseModel):
     amount: int
-    status: Literal["proposed", "escrowed", "released", "reverted"]
+    status: Literal["proposed", "held", "escrowed", "released", "reverted"]
 
 
 class PaymentRequest(BaseModel):
@@ -71,7 +71,7 @@ class TxPlan(BaseModel):
 
 
 class PipelineResult(BaseModel):
-    decision: Literal["proposed", "refused"]
+    decision: Literal["proposed", "held", "refused"]
     codes: list[str]
     flags: list[str]
     request_hash: str

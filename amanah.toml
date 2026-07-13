@@ -1,0 +1,8 @@
+injection_scan = true
+policy_engine = true
+policy_signer = true
+require_attestation = false
+k_of_n = 1
+human_cosign_threshold = 0
+proof_of_compute = false
+dry_run = false

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from amanah.db import ulid
 from amanah.models import IntentDraft, PriorIntent
 
-DECISIONS = ("proposed", "approved", "refused", "reverted")
+DECISIONS = ("proposed", "held", "approved", "refused", "reverted")
 
 
 @dataclass
@@ -111,6 +111,26 @@ class Repo:
             "SELECT * FROM anchor_payouts ORDER BY created_at"
         ).fetchall()
 
+    def supplier_addresses(self) -> set[str]:
+        rows = self.conn.execute("SELECT address FROM suppliers").fetchall()
+        return {r["address"] for r in rows}
+
+    def add_attestation(
+        self, intent_id: str, oracle_address: str, kind: str, request_hash: str
+    ) -> None:
+        self.conn.execute(
+            "INSERT INTO attestations (id, intent_id, oracle_address, kind, request_hash) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (ulid.new(), intent_id, oracle_address, kind, request_hash),
+        )
+        self.conn.commit()
+
+    def attestations(self, intent_id: str) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM attestations WHERE intent_id = ? ORDER BY created_at",
+            (intent_id,),
+        ).fetchall()
+
     def intent_count(self) -> int:
         return self.conn.execute("SELECT count(*) AS n FROM intents").fetchone()["n"]
 
@@ -129,8 +149,8 @@ class Repo:
     ) -> DecisionOutcome:
         if decision not in DECISIONS:
             raise ValueError(f"unknown decision {decision!r}")
-        if decision == "proposed" and intent is None:
-            raise ValueError("proposed requires an intent draft")
+        if decision in ("proposed", "held") and intent is None:
+            raise ValueError(f"{decision} requires an intent draft")
         if decision in ("approved", "reverted") and intent_id is None:
             raise ValueError(f"{decision} requires an intent_id")
         if decision == "refused" and (intent is not None or intent_id is not None):
@@ -138,12 +158,12 @@ class Repo:
 
         decision_id = ulid.new()
         with self.conn:
-            if decision == "proposed":
+            if decision in ("proposed", "held"):
                 intent_id = ulid.new()
                 self.conn.execute(
                     "INSERT INTO intents (id, request_hash, supplier_id, amount, "
                     "token, deadline, status, invoice_ref) "
-                    "VALUES (?, ?, ?, ?, ?, ?, 'proposed', ?)",
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         intent_id,
                         intent.request_hash,
@@ -151,6 +171,7 @@ class Repo:
                         str(intent.amount),
                         intent.token,
                         intent.deadline,
+                        decision,
                         intent.invoice_ref,
                     ),
                 )

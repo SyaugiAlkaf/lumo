@@ -1,15 +1,21 @@
 from amanah.anchor import mock_anchor
 from amanah.chain import mapper
 from amanah.chain.soroban_client import SorobanClient, SorobanError, variant_of
+from amanah.config import Config
 from amanah.db.repo import Repo
+from amanah.pipeline import release_check
 
 
-def execute(repo: Repo, client: SorobanClient, intent_id: str, sme_source: str) -> int:
+def execute(
+    repo: Repo, client: SorobanClient, intent_id: str, sme_source: str, config: Config
+) -> int | None:
     row = repo.intent(intent_id)
     if row is None:
         raise ValueError(f"unknown intent {intent_id}")
     if row["status"] != "proposed":
         raise ValueError(f"intent {intent_id} is {row['status']}, expected proposed")
+    if config.dry_run:
+        return None
 
     supplier = repo.supplier_by_id(row["supplier_id"])
     rules = repo.rules()
@@ -61,8 +67,11 @@ def attest(
     repo.add_chain_tx(intent_id, f"attest_{kind.lower()}", result.tx_hash)
 
 
-def release(repo: Repo, client: SorobanClient, intent_id: str, source: str) -> str:
+def release(
+    repo: Repo, client: SorobanClient, intent_id: str, source: str, config: Config
+) -> str:
     row = repo.intent(intent_id)
+    release_check(repo, config, row)
     result = client.release(int(row["chain_intent_id"]), source=source)
     repo.add_chain_tx(intent_id, "release", result.tx_hash)
     status = mapper.sync_status(repo, client, intent_id)

@@ -28,13 +28,14 @@ def test_migrate_up_creates_schema(conn):
         "0001_registry",
         "0002_intents_audit",
         "0003_chain_anchor",
+        "0004_trust_pipeline",
     ]
 
 
 def test_migrate_down_reverts_all(db_path):
     conn = connect(db_path)
     migrate.up(conn)
-    migrate.down(conn, steps=3)
+    migrate.down(conn, steps=4)
     tables = {
         r["name"]
         for r in conn.execute(

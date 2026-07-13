@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
             config.escrow_id, network=config.network, source=config.sme_source
         )
         if args.command == "execute":
-            chain_id = flow.execute(repo, client, args.intent_id, config.sme_source)
+            chain_id = flow.execute(repo, client, args.intent_id, config.sme_source, config)
             print(json.dumps({"intent_id": args.intent_id, "chain_intent_id": chain_id}))
         elif args.command == "attest":
             flow.attest(
@@ -81,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps({"intent_id": args.intent_id, "attested": args.kind}))
         elif args.command == "release":
-            status = flow.release(repo, client, args.intent_id, config.sme_source)
+            status = flow.release(repo, client, args.intent_id, config.sme_source, config)
             print(json.dumps({"intent_id": args.intent_id, "status": status}))
         elif args.command == "revert":
             status = flow.revert(repo, client, args.intent_id, config.sme_source)
