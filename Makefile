@@ -1,6 +1,6 @@
 WASM_DIR := contracts/target/wasm32v1-none/release
 
-.PHONY: gate-p0 gate-p1 gate-p2 gate-p3 live-check build spec
+.PHONY: gate-p0 gate-p1 gate-p2 gate-p3 gate-p4 demo live-check build spec
 
 gate-p0:
 	acceptance/acceptance.sh --gate P0
@@ -13,6 +13,12 @@ gate-p2:
 
 gate-p3:
 	acceptance/acceptance.sh --gate P3
+
+gate-p4:
+	acceptance/acceptance.sh
+
+demo:
+	scripts/demo.sh
 
 live-check:
 	@test -n "$$AMANAH_LLAMA_URL" || { echo "set AMANAH_LLAMA_URL to the llama-server base URL"; exit 1; }

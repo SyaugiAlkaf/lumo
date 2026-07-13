@@ -23,7 +23,6 @@ gate_p0() {
     local test_log build_log test_rc build_rc
     test_log="$(mktemp)"
     build_log="$(mktemp)"
-    trap 'rm -f "$test_log" "$build_log"' RETURN
 
     echo "-- cargo test -p amanah-escrow --"
     set +e
@@ -56,6 +55,7 @@ gate_p0() {
     marker T10 RED  "e2e quickstart happy+failure+anchor-> P3 (shell)"
     echo
     echo "GATE P0: PASS (T1-T3 green, T5 green; T4 and T6-T10 red as expected)"
+    rm -f "$test_log" "$build_log"
 }
 
 gate_p1() {
@@ -65,7 +65,6 @@ gate_p1() {
     local test_log build_log test_rc build_rc
     test_log="$(mktemp)"
     build_log="$(mktemp)"
-    trap 'rm -f "$test_log" "$build_log"' RETURN
 
     echo "-- cargo test --workspace --"
     set +e
@@ -90,6 +89,7 @@ gate_p1() {
     marker T5 GREEN "oracle auth: unregistered + removed rejected, non-admin cannot add"
     echo
     echo "GATE P1: PASS (T4 + T5 green)"
+    rm -f "$test_log" "$build_log"
 }
 
 gate_p2() {
@@ -101,7 +101,6 @@ gate_p2() {
 
     local test_log test_rc
     test_log="$(mktemp)"
-    trap 'rm -f "$test_log"' RETURN
 
     echo "-- pytest tests/ -k 'not live' --"
     set +e
@@ -122,6 +121,7 @@ gate_p2() {
     echo
     echo "GATE P2: PASS (T6-T9 green; T10 red as expected)"
     echo "NOTE: live-model check is human-triggered: make live-check (never a loop gate)"
+    rm -f "$test_log"
 }
 
 gate_p3() {
@@ -130,11 +130,24 @@ gate_p3() {
     echo "GATE P3: PASS (T10 green)"
 }
 
+gate_full() {
+    echo "== Amanah acceptance :: FULL (P0-P3, T1-T10 re-run) =="
+    gate_p0
+    echo
+    gate_p1
+    echo
+    gate_p2
+    echo
+    gate_p3
+    echo
+    echo "== FULL GATE: PASS (T1-T10 green, no regression) =="
+}
+
 case "$GATE" in
     P0) gate_p0 ;;
     P1) gate_p1 ;;
     P2) gate_p2 ;;
     P3) gate_p3 ;;
-    "") echo "usage: acceptance.sh --gate P0|P1|P2|P3" >&2; exit 2 ;;
+    P4|"") gate_full ;;
     *)  echo "gate '$GATE' not implemented" >&2; exit 2 ;;
 esac
