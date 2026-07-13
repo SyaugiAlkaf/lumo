@@ -5,13 +5,14 @@ from pathlib import Path
 
 from amanah import flow, pipeline
 from amanah.chain import mapper
-from amanah.chain.soroban_client import SorobanClient
+from amanah.chain.adapter import build_chain_adapter
 from amanah.config import Config
 from amanah.db import migrate, seed
 from amanah.db.connection import connect
 from amanah.db.repo import Repo
 from amanah.llm.llama_server import LlamaServerProvider
 from amanah.llm.mock import MockProvider
+from amanah.oracle.adapter import build_oracle
 
 EXIT_PROPOSED = 0
 EXIT_REFUSED = 2
@@ -64,9 +65,7 @@ def main(argv: list[str] | None = None) -> int:
             return EXIT_PROPOSED if result.decision == "proposed" else EXIT_REFUSED
 
         repo = Repo(conn)
-        client = SorobanClient(
-            config.escrow_id, network=config.network, source=config.sme_source
-        )
+        client = build_chain_adapter(config)
         if args.command == "execute":
             chain_id = flow.execute(repo, client, args.intent_id, config.sme_source, config)
             print(json.dumps({"intent_id": args.intent_id, "chain_intent_id": chain_id}))
@@ -78,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.kind,
                 config.oracle_address,
                 config.oracle_source,
+                oracle=build_oracle(config),
             )
             print(json.dumps({"intent_id": args.intent_id, "attested": args.kind}))
         elif args.command == "release":

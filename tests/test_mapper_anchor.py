@@ -9,7 +9,7 @@ class FakeClient:
     def __init__(self, chain_intent):
         self.chain_intent = chain_intent
 
-    def get_intent(self, chain_intent_id):
+    def get_status(self, chain_intent_id):
         return self.chain_intent
 
 

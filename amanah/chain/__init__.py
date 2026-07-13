@@ -1,0 +1,2 @@
+class ChainError(RuntimeError):
+    pass

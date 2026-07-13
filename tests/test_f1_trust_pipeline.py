@@ -31,7 +31,7 @@ class FakeChainClient:
         self.released = True
         return SimpleNamespace(tx_hash="f" * 64, value=None)
 
-    def get_intent(self, chain_intent_id):
+    def get_status(self, chain_intent_id):
         status = "Released" if self.released else "Funded"
         return {"status": status, "request_hash": self.request_hash}
 

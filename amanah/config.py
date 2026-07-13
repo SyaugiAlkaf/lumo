@@ -20,6 +20,10 @@ class Config:
     sme_source: str = "amanah-sme"
     oracle_source: str = "amanah-oracle"
     oracle_address: str = ""
+    chain_adapter: str = "soroban"
+    anchor_adapter: str = "mock"
+    oracle_adapter: str = ""
+    oracle_signers: str = ""
     injection_scan: bool = True
     policy_engine: bool = True
     policy_signer: bool = True

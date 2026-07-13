@@ -8,7 +8,10 @@ TX_HASH = re.compile(r"\b([0-9a-f]{64})\b")
 CREATE_INTENT_ARG_ORDER = ("sme", "supplier", "token", "amount", "request_hash", "deadline")
 
 
-class SorobanError(RuntimeError):
+from amanah.chain import ChainError
+
+
+class SorobanError(ChainError):
     pass
 
 

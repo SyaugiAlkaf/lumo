@@ -1,13 +1,15 @@
-from amanah.anchor import mock_anchor
-from amanah.chain import mapper
-from amanah.chain.soroban_client import SorobanClient, SorobanError, variant_of
+from amanah.anchor.adapter import build_anchor
+from amanah.chain import ChainError, mapper
+from amanah.chain.adapter import ChainAdapter
+from amanah.chain.soroban_client import variant_of
 from amanah.config import Config
 from amanah.db.repo import Repo
+from amanah.oracle.adapter import AttestationSource
 from amanah.pipeline import release_check
 
 
 def execute(
-    repo: Repo, client: SorobanClient, intent_id: str, sme_source: str, config: Config
+    repo: Repo, client: ChainAdapter, intent_id: str, sme_source: str, config: Config
 ) -> int | None:
     row = repo.intent(intent_id)
     if row is None:
@@ -32,13 +34,13 @@ def execute(
 
     # Never trust the client success claim: escrowed is written only after the
     # chain read confirms the funded intent binds our exact request_hash.
-    chain = client.get_intent(chain_id)
+    chain = client.get_status(chain_id)
     if chain is None:
-        raise SorobanError(f"chain intent {chain_id} not found after submit")
+        raise ChainError(f"chain intent {chain_id} not found after submit")
     if chain["request_hash"].lower() != row["request_hash"].lower():
-        raise SorobanError(f"chain intent {chain_id} request_hash mismatch")
+        raise ChainError(f"chain intent {chain_id} request_hash mismatch")
     if variant_of(chain["status"]) != "Funded":
-        raise SorobanError(f"chain intent {chain_id} not Funded")
+        raise ChainError(f"chain intent {chain_id} not Funded")
 
     repo.set_chain_intent(intent_id, chain_id)
     repo.add_chain_tx(intent_id, "create_intent", result.tx_hash)
@@ -54,21 +56,24 @@ def execute(
 
 def attest(
     repo: Repo,
-    client: SorobanClient,
+    client: ChainAdapter,
     intent_id: str,
     kind: str,
     oracle_address: str,
     oracle_source: str,
+    oracle: AttestationSource | None = None,
 ) -> None:
     row = repo.intent(intent_id)
     result = client.attest(
         int(row["chain_intent_id"]), oracle_address, kind, source=oracle_source
     )
     repo.add_chain_tx(intent_id, f"attest_{kind.lower()}", result.tx_hash)
+    if oracle is not None:
+        oracle.submit(repo, intent_id, kind, row["request_hash"])
 
 
 def release(
-    repo: Repo, client: SorobanClient, intent_id: str, source: str, config: Config
+    repo: Repo, client: ChainAdapter, intent_id: str, source: str, config: Config
 ) -> str:
     row = repo.intent(intent_id)
     release_check(repo, config, row)
@@ -76,11 +81,11 @@ def release(
     repo.add_chain_tx(intent_id, "release", result.tx_hash)
     status = mapper.sync_status(repo, client, intent_id)
     if status == "released":
-        mock_anchor.cash_out(repo, intent_id)
+        build_anchor(config).cash_out(repo, intent_id)
     return status
 
 
-def revert(repo: Repo, client: SorobanClient, intent_id: str, source: str) -> str:
+def revert(repo: Repo, client: ChainAdapter, intent_id: str, source: str) -> str:
     row = repo.intent(intent_id)
     result = client.refund(int(row["chain_intent_id"]), source=source)
     repo.add_chain_tx(intent_id, "refund", result.tx_hash)

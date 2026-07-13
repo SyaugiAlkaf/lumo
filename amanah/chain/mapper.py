@@ -1,4 +1,5 @@
-from amanah.chain.soroban_client import SorobanClient, variant_of
+from amanah.chain.adapter import ChainAdapter
+from amanah.chain.soroban_client import variant_of
 from amanah.db.repo import Repo
 
 CHAIN_TO_LOCAL = {
@@ -8,14 +9,14 @@ CHAIN_TO_LOCAL = {
 }
 
 
-def sync_status(repo: Repo, client: SorobanClient, intent_id: str) -> str:
+def sync_status(repo: Repo, client: ChainAdapter, intent_id: str) -> str:
     row = repo.intent(intent_id)
     if row is None:
         raise ValueError(f"unknown intent {intent_id}")
     if row["chain_intent_id"] is None:
         return row["status"]
 
-    chain = client.get_intent(int(row["chain_intent_id"]))
+    chain = client.get_status(int(row["chain_intent_id"]))
     if chain is None:
         return row["status"]
 
