@@ -7,6 +7,36 @@ ENV_NAMES = {"db_path": "AMANAH_DB"}
 
 TRUTHY = ("1", "true", "yes", "on")
 
+PROFILES = {
+    "strict": {
+        "injection_scan": True,
+        "policy_engine": True,
+        "policy_signer": True,
+        "require_attestation": True,
+        "k_of_n": 3,
+        "human_cosign_threshold": 1_000_000_000,
+        "proof_of_compute": True,
+    },
+    "balanced": {
+        "injection_scan": True,
+        "policy_engine": True,
+        "policy_signer": True,
+        "require_attestation": True,
+        "k_of_n": 1,
+        "human_cosign_threshold": 0,
+        "proof_of_compute": False,
+    },
+    "fast": {
+        "injection_scan": True,
+        "policy_engine": True,
+        "policy_signer": False,
+        "require_attestation": False,
+        "k_of_n": 1,
+        "human_cosign_threshold": 0,
+        "proof_of_compute": False,
+    },
+}
+
 
 @dataclass
 class Config:
@@ -36,6 +66,12 @@ class Config:
     webhook_urls: str = ""
     api_host: str = "127.0.0.1"
     api_port: int = 8788
+
+    @classmethod
+    def profile(cls, name: str, **overrides) -> "Config":
+        if name not in PROFILES:
+            raise ValueError(f"unknown profile {name!r}, expected one of: {', '.join(PROFILES)}")
+        return cls(**{**PROFILES[name], **overrides})
 
     @classmethod
     def from_file(cls, path: str | Path) -> "Config":

@@ -118,6 +118,79 @@ with refusal codes (`INJECTION_SUSPECTED`, `OVER_TX_CAP`, `UNKNOWN_SUPPLIER`,
 touches a real model; point `AMANAH_PROVIDER=llama` + `AMANAH_LLAMA_URL` at a
 local `llama-server` for the real extraction path (`make live-check`).
 
+## Integrate
+
+Deeper walkthrough with every option: [`docs/integration.md`](docs/integration.md).
+Runnable versions of the snippets live in `examples/`.
+
+### Integrate in 5 lines
+
+```python
+from amanah import AmanahClient
+
+client = AmanahClient()
+decision = client.propose(open("invoice.txt").read())
+print(decision.decision, decision.codes)
+```
+
+`decision.decision` is `proposed`, `refused`, or `held`; a proposal carries the
+exact `create_intent` tx plan and an `intent_id` you can `status()` later.
+
+### Call from any language
+
+Start the REST API (`python -m amanah.api`, default `127.0.0.1:8788`) and use
+plain HTTP — the full schema is served at `/v1/openapi.json`:
+
+```bash
+curl -X POST http://127.0.0.1:8788/v1/intents \
+  -H 'Content-Type: application/json' \
+  -d '{"invoice": "INVOICE INV-2026-0042\nFrom: CV Batik Nusantara\nAmount due: 1,250.00 USDC\n"}'
+```
+
+### Use from any AI agent
+
+`python -m amanah.mcp` is an MCP server over stdio exposing three tools:
+`amanah.propose_payment`, `amanah.get_status`, `amanah.attest`. Point any
+MCP-capable agent at that command and it can propose payments — while every
+cap, registry, and injection guard still decides, not the agent.
+
+### Target any chain
+
+Settlement is behind `ChainAdapter` / `AnchorAdapter` / `AttestationSource`
+seams, selected by config:
+
+| Seam | Config key | Live | Roadmap |
+|---|---|---|---|
+| Chain | `chain_adapter` | `soroban` (stellar CLI), `mock` | `evm` (x402) |
+| Anchor off-ramp | `anchor_adapter` | `mock` (SEP-24-shaped, zero network) | `gcash`, `pdax` |
+| Oracle | `oracle_adapter` | `""` (single local), `local` (signer set) | `shipment_api` |
+
+### Monitor it
+
+Every decision, guard trip, and state change emits an event through one bus
+(`monitoring = true`, on by default):
+
+- **SDK:** `client.on_event(print)` · `client.metrics()`
+- **REST:** `GET /v1/metrics` (counters + gauges), `POST /v1/webhooks`
+  registers a URL that receives every event as JSON
+- **Dashboard:** the read-only UI at `http://127.0.0.1:8787` shows the intent
+  timeline and live metrics
+
+### Pick a trust tier
+
+`Config.profile(name)` returns a preset guard chain; everything else stays at
+safe defaults and any field can be overridden per call:
+
+| Profile | Guards on | Extras |
+|---|---|---|
+| `strict` | injection · policy · signer · attestation · k-of-n · cosign · proof-of-compute | `k_of_n = 3`, cosign above 100 USDC |
+| `balanced` | injection · policy · signer · attestation | single oracle, no cosign |
+| `fast` | injection · policy | propose/refuse only, no release guards |
+
+```python
+client = AmanahClient(Config.profile("balanced"))
+```
+
 ## Local demo
 
 Requires Docker, the `stellar` CLI (major version pinned in
