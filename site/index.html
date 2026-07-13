@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Amanah — an on-device treasury agent for cross-border SME payments in USDC on Stellar. The AI can only read; deterministic policy decides; Soroban contracts enforce.">
+<title>Amanah — the agent can be tricked. The money cannot.</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --dim: #6e6e73;
+    --line: rgba(0, 0, 0, 0.08);
+    --accent: #4338ca;
+    --accent-contrast: #ffffff;
+    --accent-soft: rgba(67, 56, 202, 0.07);
+    --alert: #92600a;
+    --alert-strong: #b45309;
+    --alert-bg: #fdf6e3;
+    --alert-line: rgba(217, 119, 6, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0a0c;
+      --surface: #16161a;
+      --text: #f5f5f7;
+      --dim: #98989d;
+      --line: rgba(255, 255, 255, 0.1);
+      --accent: #8a93ff;
+      --accent-contrast: #0a0a0c;
+      --accent-soft: rgba(138, 147, 255, 0.1);
+      --alert: #fbbf24;
+      --alert-strong: #fbbf24;
+      --alert-bg: rgba(251, 191, 36, 0.07);
+      --alert-line: rgba(251, 191, 36, 0.4);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 2.5rem); }
+  .mono { font-family: var(--mono); }
+  a { color: inherit; }
+
+  nav {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem 1rem;
+    padding: 1.4rem 0; border-bottom: 1px solid var(--line);
+  }
+  .brand { font-weight: 700; letter-spacing: 0.28em; font-size: 0.9rem; }
+  .brand small { color: var(--dim); letter-spacing: 0.02em; font-weight: 400; margin-left: 0.9rem; }
+  .env-badge {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    color: var(--accent); border: 1px solid var(--accent); background: var(--accent-soft);
+    padding: 0.3rem 0.7rem; border-radius: 999px; white-space: nowrap;
+  }
+
+  header#hero { padding: clamp(4rem, 11vh, 7.5rem) 0 clamp(2.5rem, 6vh, 4rem); }
+  .kicker {
+    font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.3em;
+    color: var(--dim); margin: 0 0 1.2rem;
+  }
+  h1 {
+    font-size: clamp(2.5rem, 6.5vw, 4.6rem);
+    line-height: 1.04; letter-spacing: -0.022em; font-weight: 700; margin: 0;
+  }
+  h1 .accent { color: var(--accent); }
+  #hero p.lede {
+    max-width: 46rem; color: var(--dim); font-size: clamp(1.05rem, 2vw, 1.3rem);
+    margin: 1.7rem 0 0;
+  }
+  #hero p.lede strong { color: var(--text); font-weight: 600; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 2.2rem; }
+  .btn {
+    display: inline-block; text-decoration: none; font-weight: 600; font-size: 0.95rem;
+    padding: 0.85rem 1.6rem; border-radius: 999px; border: 1px solid var(--line);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-contrast); border-color: transparent; }
+  .btn.ghost { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.primary:hover { box-shadow: 0 8px 24px var(--accent-soft), var(--shadow); }
+
+  .diagram {
+    margin: clamp(2.4rem, 6vh, 4rem) 0 0;
+    border: 1px solid var(--line); border-radius: 18px; background: var(--surface);
+    box-shadow: var(--shadow); overflow-x: auto; padding: 1.7rem 1.9rem;
+  }
+  .diagram pre {
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.55;
+    margin: 0; color: var(--dim);
+  }
+  .diagram .chain { color: var(--accent); font-weight: 600; }
+  .diagram .blocked { color: var(--alert-strong); font-weight: 700; }
+  .diagram .boundary { color: var(--text); font-weight: 700; }
+  .diagram-caption {
+    font-family: var(--mono); font-size: 0.7rem; color: var(--dim);
+    letter-spacing: 0.08em; margin-top: 1.2rem;
+  }
+
+  section { padding: clamp(3.2rem, 9vh, 5.5rem) 0 0; }
+  .step-label {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.24em;
+    color: var(--accent); margin-bottom: 0.8rem;
+  }
+  h2 { font-size: clamp(1.7rem, 3.6vw, 2.5rem); letter-spacing: -0.018em; line-height: 1.15; margin: 0 0 0.6rem; }
+  .section-sub { color: var(--dim); max-width: 44rem; font-size: 1.02rem; margin: 0 0 2rem; }
+  .section-sub strong { color: var(--text); font-weight: 600; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 1rem; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: 1.5rem 1.6rem; box-shadow: var(--shadow);
+  }
+  .card .big { font-size: clamp(1.7rem, 3.5vw, 2.3rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .card .big.mono { font-family: var(--mono); font-size: clamp(1.4rem, 3vw, 1.9rem); }
+  .card .big.alert-text { color: var(--alert-strong); }
+  .card h3 { font-size: 1.05rem; margin: 0.8rem 0 0.3rem; }
+  .card p { color: var(--dim); font-size: 0.92rem; margin: 0.3rem 0 0; }
+  .card .tag {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .card .tag.hot { color: var(--accent); }
+  .card .tag.warn { color: var(--alert); }
+
+  .layer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 1rem; }
+  .layer {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+    padding: 1.5rem 1.6rem; box-shadow: var(--shadow); position: relative;
+  }
+  .layer.enforced { border-color: var(--accent); background: linear-gradient(180deg, var(--accent-soft), var(--surface) 55%); }
+  .layer .n { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.18em; color: var(--dim); }
+  .layer.enforced .n { color: var(--accent); }
+  .layer h3 { font-size: 1.15rem; margin: 0.55rem 0 0.4rem; }
+  .layer p { color: var(--dim); font-size: 0.92rem; margin: 0; }
+  .layer ul { margin: 0.7rem 0 0; padding: 0; list-style: none; }
+  .layer li { font-family: var(--mono); font-size: 0.74rem; color: var(--dim); padding: 0.18rem 0; }
+  .layer li::before { content: "— "; color: var(--accent); }
+
+  .punchline {
+    margin: 2rem 0 0; border: 1px solid var(--alert-line); border-radius: 18px;
+    background: var(--alert-bg); padding: 1.4rem 1.7rem; box-shadow: var(--shadow);
+    font-size: 1.05rem;
+  }
+  .punchline b { color: var(--alert-strong); }
+
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: demo; max-width: 46rem; }
+  .steps li { position: relative; padding: 0 0 1.8rem 3.4rem; counter-increment: demo; }
+  .steps li::before {
+    content: counter(demo, decimal-leading-zero); position: absolute; left: 0; top: 0.1rem;
+    font-family: var(--mono); font-size: 0.78rem; font-weight: 700; color: var(--accent);
+    border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow);
+    border-radius: 10px; padding: 0.35rem 0.5rem;
+  }
+  .steps li::after {
+    content: ""; position: absolute; left: 1.05rem; top: 2.4rem; bottom: 0.3rem;
+    width: 1px; background: var(--line);
+  }
+  .steps li:last-child::after { display: none; }
+  .steps .what { font-weight: 650; font-size: 1.08rem; }
+  .steps .what .alert-text { color: var(--alert-strong); }
+  .steps .note { color: var(--dim); font-size: 0.92rem; margin-top: 0.15rem; }
+  .steps code {
+    font-family: var(--mono); font-size: 0.78rem; background: var(--accent-soft);
+    color: var(--accent); border-radius: 6px; padding: 0.1rem 0.4rem;
+  }
+  .cmd {
+    margin-top: 0.6rem; display: inline-block; font-family: var(--mono); font-size: 0.8rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: var(--shadow); padding: 0.6rem 0.9rem; color: var(--text);
+  }
+  .cmd b { color: var(--accent); font-weight: 600; }
+
+  .snippet {
+    margin-top: 1.4rem; border: 1px solid var(--line); border-radius: 16px;
+    background: var(--surface); box-shadow: var(--shadow); overflow-x: auto; padding: 1.2rem 1.4rem;
+  }
+  .snippet pre { margin: 0; font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; color: var(--dim); }
+  .snippet .kw { color: var(--accent); font-weight: 600; }
+
+  .proof-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 1rem; }
+  .addr {
+    margin-top: 1.4rem; border: 1px dashed var(--line); border-radius: 16px;
+    padding: 1.2rem 1.4rem; overflow-x: auto;
+  }
+  .addr pre { margin: 0; font-family: var(--mono); font-size: 0.76rem; line-height: 1.7; color: var(--dim); }
+  .addr .k { color: var(--accent); font-weight: 600; }
+
+  footer { margin-top: clamp(3.5rem, 9vh, 6rem); border-top: 1px solid var(--line); padding: 2rem 0 2.8rem; }
+  footer .foot-grid { display: flex; flex-wrap: wrap; gap: 1rem 3rem; justify-content: space-between; }
+  footer p { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); margin: 0.3rem 0; }
+  footer .k { color: var(--accent); }
+
+  html.js .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  html.js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    html.js .reveal { opacity: 1; transform: none; transition: none; }
+    .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">AMANAH<small>on-device treasury agent</small></div>
+  <div class="env-badge">APAC STELLAR HACKATHON · SOROBAN</div>
+</nav>
+
+<header id="hero">
+  <p class="kicker">AMANAH — from the Indonesian for "a trust faithfully kept"</p>
+  <h1>The agent can be tricked.<br><span class="accent">The money cannot.</span></h1>
+  <p class="lede">Amanah is an on-device treasury agent for cross-border SME payments in
+  <strong>USDC on Stellar</strong>. The AI can only read invoices — a deterministic policy layer decides,
+  and two Soroban smart contracts enforce. Even a fully compromised model cannot move funds
+  anywhere but the registered supplier, or back home.</p>
+  <div class="cta-row">
+    <a class="btn primary" href="#demo">Watch the demo</a>
+    <a class="btn ghost" href="#links">GitHub</a>
+    <a class="btn ghost" href="#platform">Docs</a>
+  </div>
+
+  <div class="diagram reveal">
+<pre>
+invoice ──▶ [ scan ] ──▶ [ llm reads ] ──▶ [ policy ] ─<span class="boundary">┃</span>─▶ <span class="chain">[ signer ] ──▶ [ escrow ] ──▶ attest ──▶ RELEASE</span>
+               │                              │        <span class="boundary">┃</span>                      │
+               ▼                              ▼        <span class="boundary">┃</span>                      ▼
+      <span class="blocked">✕ INJECTION BLOCKED</span>              <span class="blocked">✕ OUT OF POLICY</span> <span class="boundary">┃</span>       <span class="chain">no attest + deadline ──▶ REVERT to SME</span>
+                                                       <span class="boundary">┃</span>
+        ── untrusted · the model only reads ──         <span class="boundary">┃</span>   ── deterministic · the chain enforces ──
+</pre>
+    <div class="diagram-caption">THE TRUST BOUNDARY — everything left of the line is advisory; the chain is the authority</div>
+  </div>
+</header>
+
+<section id="problem" class="reveal">
+  <div class="step-label">01 — THE PROBLEM</div>
+  <h2>Cross-border trade still settles at 1973 speed.</h2>
+  <p class="section-sub">An SME exporter in Yogyakarta paying a fabric supplier abroad waits on
+  correspondent banking and paper letters of credit. Stablecoins fix the rails and AI agents fix
+  the labor — but an agent holding your keys creates a brand-new problem.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="big mono">3–5 days</div>
+      <h3>Correspondent banking</h3>
+      <p>A payment hops through intermediary banks, each adding time, fees, and FX spread,
+      before a supplier sees a cent.</p>
+    </div>
+    <div class="card">
+      <div class="big mono">Letters of credit</div>
+      <h3>Trust by paperwork</h3>
+      <p>Banks intermediate because neither side trusts the other. Slow, manual,
+      and priced for corporates — not for a batik exporter.</p>
+    </div>
+    <div class="card">
+      <div class="big mono alert-text">1 poisoned invoice</div>
+      <h3>The agent trust gap</h3>
+      <p>Give an LLM your keys and it obeys whoever writes the best prompt.
+      "Our payment address has changed" is all it takes.</p>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="reveal">
+  <div class="step-label">02 — HOW IT WORKS</div>
+  <h2>Compromise the AI. The money still can't move.</h2>
+  <p class="section-sub">Amanah splits the agent into three layers with a hard trust boundary:
+  the model is <strong>advisory only</strong>, and every payment is checked twice more on-chain.</p>
+  <div class="layer-grid">
+    <div class="layer">
+      <div class="n">LAYER 1 · UNTRUSTED</div>
+      <h3>The LLM only reads</h3>
+      <p>An on-device model extracts supplier, amount, and reference from invoice text.
+      It holds zero tools, zero keys, zero network access — it cannot act, only report.</p>
+      <ul>
+        <li>extraction-only provider seam</li>
+        <li>runs locally, invoices never leave the device</li>
+      </ul>
+    </div>
+    <div class="layer">
+      <div class="n">LAYER 2 · DETERMINISTIC</div>
+      <h3>Policy holds the pen</h3>
+      <p>Plain code — not a model — decides. Injection scanner, per-transaction caps,
+      a signed supplier registry. Out-of-policy means a typed refusal and no chain call.</p>
+      <ul>
+        <li>NFKC + zero-width injection scan</li>
+        <li>caps · registry · single audit chokepoint</li>
+      </ul>
+    </div>
+    <div class="layer enforced">
+      <div class="n">LAYER 3 · ENFORCED ON-CHAIN</div>
+      <h3>The chain is the authority</h3>
+      <p>A policy-signer smart account refuses out-of-policy transactions before submission,
+      and the escrow can structurally pay only the bound supplier — or refund the SME. No third path.</p>
+      <ul>
+        <li>__check_auth allowlist + per-tx cap</li>
+        <li>escrow: release → supplier · refund → SME</li>
+      </ul>
+    </div>
+  </div>
+  <div class="punchline reveal">
+    An adversarial test suite drives a <b>fully compromised LLM</b> — one that obeys attacker
+    text inside the invoice — and proves funds still reach only the registered supplier or
+    return to the SME. The exploit is written; the money doesn't move.
+  </div>
+</section>
+
+<section id="demo" class="reveal">
+  <div class="step-label">03 — THE DEMO</div>
+  <h2>One command. Five moves. Two of them hostile.</h2>
+  <p class="section-sub">The narrated walkthrough runs the whole spine on a local Stellar
+  quickstart — real contracts, test USDC, no real funds.</p>
+  <ol class="steps">
+    <li>
+      <div class="what">Invoice arrives — including a poisoned one</div>
+      <div class="note">The agent extracts fields from a real supplier invoice. A fake
+      "our payment address has changed" email is fed through the same pipe — the injection
+      scanner refuses it before any transaction exists. <code>✕ INJECTION_SUSPECTED</code></div>
+    </li>
+    <li>
+      <div class="what">Propose</div>
+      <div class="note">Policy checks the cap and the signed supplier registry, then emits an
+      exact <code>create_intent</code> plan. A <code>request_hash</code> binds the proposal to
+      precisely this payment — nothing can be swapped later.</div>
+    </li>
+    <li>
+      <div class="what">Escrow on-chain</div>
+      <div class="note">Funds lock in the Soroban escrow, structurally bound to that one
+      supplier. From this moment no key, prompt, or bug can redirect them.</div>
+    </li>
+    <li>
+      <div class="what">Attest → release</div>
+      <div class="note">The registered oracle attests <code>Shipped</code> (first-write-wins);
+      the escrow releases to the bound supplier — the only address it can pay.</div>
+    </li>
+    <li>
+      <div class="what"><span class="alert-text">Revert</span> — the failure path</div>
+      <div class="note">A second order goes unshipped past its deadline (a real wait, no ledger
+      time-travel). Funds return to the SME untouched; the supplier never sees them.</div>
+    </li>
+  </ol>
+  <div class="cmd"><b>$</b> scripts/demo.sh &nbsp;·&nbsp; live dashboard at 127.0.0.1:8787</div>
+</section>
+
+<section id="platform" class="reveal">
+  <div class="step-label">04 — THE PLATFORM</div>
+  <h2>A trust dial, not a one-off demo.</h2>
+  <p class="section-sub">Every guard is a config flag, every dependency sits behind an adapter
+  seam, and every decision is observable. Full walkthrough in
+  <span class="mono">docs/integration.md</span>.</p>
+  <div class="cards">
+    <div class="card">
+      <div class="tag hot">TRUST GUARDS</div>
+      <h3>Turn the dial</h3>
+      <p>Injection · policy · signer · attestation · <b>k-of-n oracle quorum</b> ·
+      <b>cosign above threshold</b> · proof-of-compute. Presets: <span class="mono">fast</span>,
+      <span class="mono">balanced</span>, <span class="mono">strict</span> — one line to switch.</p>
+    </div>
+    <div class="card">
+      <div class="tag hot">ADAPTERS</div>
+      <h3>Any chain, any vendor</h3>
+      <p>Settlement sits behind <span class="mono">ChainAdapter · AnchorAdapter ·
+      AttestationSource</span> seams, selected by config. Soroban live today;
+      EVM (x402) and real anchor off-ramps are drop-in seams, not rewrites.</p>
+    </div>
+    <div class="card">
+      <div class="tag hot">OBSERVABILITY</div>
+      <h3>Watch every decision</h3>
+      <p>One event bus feeds Prometheus-style metrics, webhook fan-out, and a live
+      dashboard. Every guard trip and state change is on the record —
+      <span class="mono">GET /v1/metrics</span>.</p>
+    </div>
+    <div class="card">
+      <div class="tag hot">INTERFACES</div>
+      <h3>Call it from any code — or any AI agent</h3>
+      <p>Python SDK, REST with OpenAPI, and an <b>MCP server</b> so any agent can propose
+      payments — while every cap, registry, and injection guard still decides. The caller
+      is never trusted.</p>
+    </div>
+  </div>
+  <div class="snippet reveal">
+<pre>
+<span class="kw">from</span> amanah <span class="kw">import</span> AmanahClient
+
+client = AmanahClient()                          <span class="kw"># or: REST at :8788 · MCP over stdio</span>
+decision = client.propose(open(<span class="kw">"invoice.txt"</span>).read())
+print(decision.decision, decision.codes)         <span class="kw"># proposed | refused | held</span>
+</pre>
+  </div>
+</section>
+
+<section id="proof" class="reveal">
+  <div class="step-label">05 — PROOF</div>
+  <h2>Real contracts. Real tests. Real refusals.</h2>
+  <div class="proof-grid">
+    <div class="card">
+      <div class="big mono">Stellar</div>
+      <h3>Built on Soroban</h3>
+      <p>Two Rust contracts — a conditional-release escrow and a
+      <span class="mono">__check_auth</span> policy-signer smart account —
+      running on the Stellar quickstart network end-to-end.</p>
+    </div>
+    <div class="card">
+      <div class="big mono">164 tests</div>
+      <h3>Gated, not promised</h3>
+      <p>142 Python + 22 Rust tests behind one acceptance gate, including an adversarial
+      suite where the LLM is fully compromised and funds still cannot be redirected.</p>
+    </div>
+    <div class="card">
+      <div class="big mono">MIT</div>
+      <h3>Open source</h3>
+      <p>The contracts, the agent, the SDK, the demo — all of it. Fork it, point the
+      adapters at your chain, turn the trust dial to fit your risk.</p>
+    </div>
+  </div>
+  <div class="addr reveal">
+<pre>
+<span class="k">network</span>   stellar testnet
+<span class="k">escrow</span>    C… — testnet address lands here after the manual deploy checklist (scripts/deploy_testnet.sh)
+<span class="k">signer</span>    C… — policy-account address, same checklist
+<span class="k">note</span>      testnet deploy is a human-run STOP boundary — never triggered by CI or scripts
+</pre>
+  </div>
+</section>
+
+<footer id="links">
+  <div class="foot-grid">
+    <div>
+      <p><span class="k">AMANAH</span> — the LLM reads, the policy decides, the chain enforces.</p>
+      <p>Built for the APAC Stellar Hackathon · 2026 · MIT license</p>
+    </div>
+    <div>
+      <p><span class="k">demo</span>&nbsp;&nbsp;scripts/demo.sh (repo root)</p>
+      <p><span class="k">docs</span>&nbsp;&nbsp;docs/integration.md · README.md</p>
+      <p><span class="k">code</span>&nbsp;&nbsp;repository link added on publish</p>
+    </div>
+  </div>
+  <p style="margin-top:1.4rem">Local demo network only — test USDC, no real funds move. Cash-out receipts are MOCK; no anchor network is contacted.</p>
+</footer>
+
+</div>
+<script>
+document.documentElement.classList.add("js");
+const obs = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) { e.target.classList.add("in"); obs.unobserve(e.target); }
+  }
+}, { threshold: 0.12 });
+document.querySelectorAll(".reveal").forEach((el) => {
+  if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add("in");
+  else obs.observe(el);
+});
+</script>
+</body>
+</html>
