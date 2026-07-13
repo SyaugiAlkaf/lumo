@@ -328,6 +328,7 @@ def example_env(tmp_path):
         "AMANAH_DB": str(tmp_path / "example.db"),
         "AMANAH_CONFIG": str(tmp_path / "missing.toml"),
         "AMANAH_PROVIDER": "mock",
+        "PYTHONPATH": str(ROOT),
     }
 
 

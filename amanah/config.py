@@ -34,6 +34,8 @@ class Config:
     dry_run: bool = False
     monitoring: bool = True
     webhook_urls: str = ""
+    api_host: str = "127.0.0.1"
+    api_port: int = 8788
 
     @classmethod
     def from_file(cls, path: str | Path) -> "Config":
