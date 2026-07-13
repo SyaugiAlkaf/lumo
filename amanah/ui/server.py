@@ -3,9 +3,30 @@ import sqlite3
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from amanah.config import PROFILES, Config
 from amanah.monitor import metrics
 
 INDEX = Path(__file__).parent / "index.html"
+
+TRUST_FLAGS = (
+    "injection_scan",
+    "policy_engine",
+    "policy_signer",
+    "require_attestation",
+    "k_of_n",
+    "human_cosign_threshold",
+    "proof_of_compute",
+)
+
+
+def trust_state() -> dict:
+    config = Config.from_env()
+    flags = {name: getattr(config, name) for name in TRUST_FLAGS}
+    profile = next(
+        (name for name, p in PROFILES.items() if all(flags[k] == v for k, v in p.items())),
+        "custom",
+    )
+    return {"flags": flags, "profile": profile, "profiles": PROFILES}
 
 
 def connect_ro(db_path: str) -> sqlite3.Connection:
@@ -44,6 +65,7 @@ def read_state(db_path: str) -> dict:
         }
     finally:
         conn.close()
+    state["trust"] = trust_state()
     return state
 
 

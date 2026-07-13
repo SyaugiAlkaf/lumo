@@ -2,122 +2,528 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Amanah — SME Treasury Agent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amanah — the agent can be tricked. The money cannot.</title>
 <style>
-  :root { --bg:#0f1419; --card:#1a2129; --text:#e6e1cf; --dim:#8a919b; --green:#7fd962; --red:#f07178; --amber:#ffb454; --blue:#59c2ff; }
-  body { background:var(--bg); color:var(--text); font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; margin:0; padding:24px; }
-  h1 { font-size:18px; margin:0 0 4px; }
-  .sub { color:var(--dim); margin-bottom:20px; }
-  .banner { display:none; background:#3d1518; border:1px solid var(--red); color:var(--red); padding:12px 16px; border-radius:6px; margin-bottom:16px; font-weight:bold; }
-  .banner.show { display:block; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  .card { background:var(--card); border-radius:8px; padding:16px; margin-bottom:16px; }
-  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin:0 0 12px; }
-  .intent { border-left:3px solid var(--dim); padding:8px 12px; margin-bottom:12px; }
-  .intent.escrowed { border-color:var(--amber); }
-  .intent.released { border-color:var(--green); }
-  .intent.reverted { border-color:var(--red); }
-  .status { font-weight:bold; text-transform:uppercase; font-size:11px; padding:2px 8px; border-radius:4px; background:#333; }
-  .status.escrowed { color:var(--amber); } .status.released { color:var(--green); }
-  .status.reverted { color:var(--red); } .status.proposed { color:var(--blue); }
-  .tl { list-style:none; margin:8px 0 0; padding:0; }
-  .tl li { padding:2px 0; color:var(--dim); }
-  .tl .hash { color:var(--blue); font-size:11px; word-break:break-all; }
-  .refused { color:var(--red); }
-  .receipt { border:2px dashed var(--amber); border-radius:6px; padding:12px; margin-top:8px; }
-  .receipt .mock { color:var(--amber); font-weight:bold; font-size:16px; }
-  .amount { color:var(--green); }
-  .dim { color:var(--dim); font-size:12px; }
-  .ctrs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
-  .ctr { background:#232b35; border-radius:4px; padding:4px 10px; font-size:12px; color:var(--dim); }
-  .ctr b { color:var(--text); margin-right:4px; }
-  .feed { max-height:220px; overflow-y:auto; }
-  .ev { padding:2px 0; font-size:12px; border-bottom:1px solid #232b35; }
-  .ev .name { color:var(--blue); }
-  .ev .name.bad { color:var(--red); }
+  :root {
+    --bg: #f5f5f7;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --dim: #6e6e73;
+    --line: rgba(0, 0, 0, 0.08);
+    --accent: #4338ca;
+    --accent-contrast: #ffffff;
+    --accent-soft: rgba(67, 56, 202, 0.07);
+    --alert: #92600a;
+    --alert-strong: #b45309;
+    --alert-bg: #fdf6e3;
+    --alert-line: rgba(217, 119, 6, 0.45);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0a0c;
+      --surface: #16161a;
+      --text: #f5f5f7;
+      --dim: #98989d;
+      --line: rgba(255, 255, 255, 0.1);
+      --accent: #8a93ff;
+      --accent-contrast: #0a0a0c;
+      --accent-soft: rgba(138, 147, 255, 0.1);
+      --alert: #fbbf24;
+      --alert-strong: #fbbf24;
+      --alert-bg: rgba(251, 191, 36, 0.07);
+      --alert-line: rgba(251, 191, 36, 0.4);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 clamp(1.25rem, 4vw, 2.5rem); }
+  .mono { font-family: var(--mono); }
+
+  nav {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.8rem 1rem;
+    padding: 1.4rem 0; border-bottom: 1px solid var(--line);
+  }
+  .brand { font-weight: 700; letter-spacing: 0.28em; font-size: 0.9rem; }
+  .brand small { color: var(--dim); letter-spacing: 0.02em; font-weight: 400; margin-left: 0.9rem; }
+  .env-badge {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    color: var(--alert); border: 1px solid var(--alert-line); background: var(--alert-bg);
+    padding: 0.3rem 0.7rem; border-radius: 999px; white-space: nowrap;
+  }
+
+  header.hero { padding: clamp(3.5rem, 9vh, 6.5rem) 0 clamp(2rem, 5vh, 3.5rem); }
+  h1 {
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    line-height: 1.06; letter-spacing: -0.02em; font-weight: 700; margin: 0;
+  }
+  h1 .accent { color: var(--accent); }
+  .hero p.lede {
+    max-width: 42rem; color: var(--dim); font-size: clamp(1.05rem, 2vw, 1.25rem);
+    margin: 1.6rem 0 0;
+  }
+  .hero p.lede strong { color: var(--text); font-weight: 600; }
+
+  .diagram {
+    margin: clamp(2rem, 5vh, 3.5rem) 0 0;
+    border: 1px solid var(--line); border-radius: 16px; background: var(--surface);
+    box-shadow: var(--shadow); overflow-x: auto; padding: 1.6rem 1.8rem;
+  }
+  .diagram pre {
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.55;
+    margin: 0; color: var(--dim);
+  }
+  .diagram .chain { color: var(--accent); font-weight: 600; }
+  .diagram .blocked { color: var(--alert-strong); font-weight: 700; }
+  .diagram-caption { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); letter-spacing: 0.08em; margin-top: 1.1rem; }
+
+  section { padding: clamp(2.6rem, 7vh, 4.5rem) 0 0; }
+  .step-label {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.22em;
+    color: var(--accent); margin-bottom: 0.7rem;
+  }
+  h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); letter-spacing: -0.015em; margin: 0 0 0.5rem; }
+  .section-sub { color: var(--dim); max-width: 40rem; margin: 0 0 1.8rem; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); gap: 1rem; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 1.3rem 1.4rem; box-shadow: var(--shadow);
+  }
+  .card .ref { font-family: var(--mono); font-size: 0.72rem; color: var(--dim); letter-spacing: 0.06em; }
+  .card .from { font-weight: 600; font-size: 1.05rem; margin: 0.35rem 0 0.1rem; }
+  .card .amount { font-family: var(--mono); font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0 0.6rem; }
+  .chip {
+    display: inline-block; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 0.22rem 0.6rem; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--dim);
+  }
+  .chip.proposed, .chip.escrowed, .chip.released { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  .chip.refused, .chip.reverted { color: var(--alert); border-color: var(--alert-line); background: var(--alert-bg); }
+  .card .memo { color: var(--dim); font-size: 0.85rem; margin-top: 0.4rem; }
+
+  .checklist { list-style: none; margin: 0.8rem 0 0; padding: 0; }
+  .checklist li { padding: 0.28rem 0; font-size: 0.9rem; color: var(--dim); }
+  .checklist li::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+  .hash { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); word-break: break-all; }
+  .hash b { color: var(--accent); font-weight: 600; }
+
+  #injection-banner {
+    margin-top: 2rem;
+    border: 1px solid var(--alert-line); border-radius: 20px;
+    background: var(--alert-bg); box-shadow: var(--shadow);
+    padding: clamp(1.8rem, 4vw, 3rem);
+    opacity: 0.45; transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  #injection-banner.armed { opacity: 1; }
+  #injection-banner .flag { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.22em; color: var(--alert); }
+  #injection-banner h3 {
+    font-size: clamp(1.8rem, 4.5vw, 3rem); line-height: 1.1; letter-spacing: -0.02em;
+    margin: 0.6rem 0 0.4rem; color: var(--alert-strong);
+  }
+  #injection-banner .detail { color: var(--text); max-width: 44rem; font-size: 1.02rem; margin: 0.6rem 0 1rem; }
+  #injection-banner .codes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  #injection-banner .codes span {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+    border: 1px solid var(--alert-line); color: var(--alert);
+    border-radius: 6px; padding: 0.25rem 0.55rem;
+  }
+  #injection-banner .idle { font-family: var(--mono); font-size: 0.75rem; color: var(--dim); margin: 0.4rem 0 0; }
+
+  .flow { display: grid; gap: 1.2rem; }
+  .flow-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 1.4rem 1.6rem; }
+  .flow-card .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.7rem; margin-bottom: 0.9rem; }
+  .flow-card .head .from { font-weight: 600; font-size: 1.05rem; }
+  .flow-card .head .amount { font-family: var(--mono); color: var(--dim); }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { position: relative; padding: 0 0 1rem 1.6rem; }
+  .steps li::before {
+    content: ""; position: absolute; left: 0.31rem; top: 0.55rem; bottom: -0.15rem;
+    width: 1px; background: var(--line);
+  }
+  .steps li:last-child::before { display: none; }
+  .steps li::after {
+    content: ""; position: absolute; left: 0; top: 0.42rem;
+    width: 0.6rem; height: 0.6rem; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--accent);
+  }
+  .steps li.alert::after { border-color: var(--alert-strong); }
+  .steps .what { font-weight: 600; font-size: 0.95rem; }
+  .steps .what.alert-text { color: var(--alert-strong); }
+  .steps .note { color: var(--dim); font-size: 0.85rem; }
+  .receipt {
+    margin-top: 0.35rem; display: inline-block; border: 1px dashed var(--alert-line);
+    border-radius: 10px; padding: 0.5rem 0.8rem; font-family: var(--mono); font-size: 0.72rem; color: var(--dim);
+  }
+  .receipt b { color: var(--alert); letter-spacing: 0.08em; }
+
+  #monitor-panel .counters {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
+    gap: 0.8rem; margin-bottom: 1.2rem;
+  }
+  .counter {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 1rem 1.1rem; box-shadow: var(--shadow);
+  }
+  .counter b { display: block; font-family: var(--mono); font-size: 1.7rem; font-weight: 600; line-height: 1.2; }
+  .counter.alert b { color: var(--alert-strong); }
+  .counter.good b { color: var(--accent); }
+  .counter span { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+  .feed {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow); max-height: 280px; overflow-y: auto; padding: 0.6rem 1.1rem;
+  }
+  .ev { display: flex; gap: 0.9rem; padding: 0.32rem 0; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 0.74rem; }
+  .ev:last-child { border-bottom: none; }
+  .ev .t { color: var(--dim); flex: none; }
+  .ev .n { color: var(--accent); flex: none; }
+  .ev .n.bad { color: var(--alert-strong); font-weight: 700; }
+  .ev .d { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #trust-dial .dial-box {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: var(--shadow); padding: clamp(1.4rem, 3.5vw, 2.2rem);
+  }
+  .tiers { display: flex; gap: 0.4rem; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 0.3rem; width: fit-content; max-width: 100%; }
+  .tiers button {
+    font: 600 0.78rem/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+    border: none; background: transparent; color: var(--dim); padding: 0.65rem 1.2rem;
+    border-radius: 9px; cursor: pointer; transition: background 0.25s ease, color 0.25s ease;
+  }
+  .tiers button.on { background: var(--accent); color: var(--accent-contrast); }
+  .tier-note { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); margin: 0.8rem 0 1.4rem; }
+  .flags { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 0.6rem; }
+  .flag-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    border: 1px solid var(--line); border-radius: 12px; padding: 0.75rem 1rem;
+    cursor: pointer; user-select: none; transition: border-color 0.25s ease, background 0.25s ease;
+  }
+  .flag-row:hover { border-color: var(--accent); }
+  .flag-row .name { font-size: 0.9rem; font-weight: 600; }
+  .flag-row .desc { font-size: 0.75rem; color: var(--dim); }
+  .flag-val {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.3rem 0.7rem; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap;
+  }
+  .flag-row.on { background: var(--accent-soft); border-color: var(--accent); }
+  .flag-row.on .flag-val { color: var(--accent); border-color: var(--accent); }
+
+  footer { margin-top: clamp(3rem, 8vh, 5rem); border-top: 1px solid var(--line); padding: 1.6rem 0 2.4rem; }
+  footer p { font-family: var(--mono); font-size: 0.7rem; color: var(--dim); margin: 0.3rem 0; }
+
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    #injection-banner, .tiers button, .flag-row { transition: none; }
+  }
 </style>
 </head>
 <body>
-<h1>Amanah — treasury agent for Sari Craft Export</h1>
-<div class="sub">Bu Sari's batik export business, Yogyakarta &middot; untrusted LLM reads invoices &middot; deterministic policy decides &middot; Soroban enforces</div>
-<div class="sub">LOCAL DEMO NETWORK &mdash; test USDC only, no real funds move &middot; cash-out below is a MOCK receipt, not a real anchor</div>
-<div id="banner" class="banner">&#9888; INJECTION SUSPECTED — invoice refused, no transaction was proposed</div>
-<div class="grid">
-  <div>
-    <div class="card"><h2>Payment intents</h2><div id="intents"><span class="dim">no intents yet</span></div></div>
-    <div class="card"><h2>Refusals</h2><div id="refusals"><span class="dim">none</span></div></div>
+<div class="wrap">
+
+<nav>
+  <div class="brand">AMANAH<small>on-device treasury agent</small></div>
+  <div class="env-badge">LOCAL DEMO · TEST USDC · NO REAL FUNDS</div>
+</nav>
+
+<header class="hero">
+  <h1>The agent can be tricked.<br><span class="accent">The money cannot.</span></h1>
+  <p class="lede"><strong>Bu Sari</strong> runs Sari Craft Export, a batik exporter in Yogyakarta.
+  Her on-device agent reads supplier invoices — and invoices can lie. So the LLM never touches money:
+  a deterministic policy layer decides, and a Soroban escrow contract enforces.</p>
+  <div class="diagram reveal">
+<pre>
+invoice ──▶ [ scan ] ──▶ [ policy ] ──▶ [ signer ] ──▶ <span class="chain">[ escrow ] ──▶ attest ──▶ release</span>
+                │                                           │
+                ▼                                           ▼
+       <span class="blocked">✕ INJECTION BLOCKED</span>                       deadline lapse ──▶ REVERT
+</pre>
+    <div class="diagram-caption">TRUST BOUNDARY — everything left of escrow is advisory; the chain is the authority</div>
   </div>
-  <div>
-    <div class="card"><h2>Cash-out receipts (mock anchor)</h2><div id="payouts"><span class="dim">none</span></div></div>
-    <div class="card"><h2>Policy</h2><div id="rules" class="dim"></div></div>
-    <div class="card"><h2>Monitoring</h2>
-      <div id="counters" class="ctrs"><span class="dim">waiting for metrics…</span></div>
-      <div id="events" class="feed"><span class="dim">no events yet</span></div>
+</header>
+
+<section id="invoice-inbox" class="reveal">
+  <div class="step-label">01 — THE INVOICE</div>
+  <h2>Invoices arrive. Some of them lie.</h2>
+  <p class="section-sub">Every document below went through the same pipe. The agent extracts; it never decides.</p>
+  <div class="cards" id="inbox-cards"><span class="chip">waiting for data</span></div>
+</section>
+
+<section id="proposal" class="reveal">
+  <div class="step-label">02 — THE PROPOSAL</div>
+  <h2>The agent proposes. Policy holds the pen.</h2>
+  <p class="section-sub">A proposal only exists if the supplier is in the signed registry and the amount is under cap. The request hash binds it to exactly this payment.</p>
+  <div class="cards" id="proposal-cards"><span class="chip">waiting for data</span></div>
+</section>
+
+<section id="blocked" class="reveal">
+  <div class="step-label">03 — THE ATTACK</div>
+  <h2>A poisoned invoice tries to redirect the payment.</h2>
+  <div id="injection-banner">
+    <div class="flag">SECURITY EVENT</div>
+    <h3>✕ INJECTION BLOCKED — payment redirect attempt detected</h3>
+    <div id="banner-body">
+      <p class="idle">no injection attempt observed yet — process a poisoned invoice to see this fire</p>
     </div>
   </div>
+</section>
+
+<section id="spine-timeline" class="reveal">
+  <div class="step-label">04 — THE MONEY</div>
+  <h2>Escrow in. Attested out. Or straight back.</h2>
+  <p class="section-sub">Funds lock on-chain, structurally bound to one supplier. An oracle attestation releases them; a lapsed deadline returns them. There is no third path.</p>
+  <div class="flow" id="timeline-cards"><span class="chip">waiting for data</span></div>
+</section>
+
+<section id="monitor-panel" class="reveal">
+  <div class="step-label">05 — THE RECORD</div>
+  <h2>Every decision is on the record.</h2>
+  <div class="counters" id="counters"></div>
+  <div class="feed" id="events"><div class="ev"><span class="d">no events yet</span></div></div>
+</section>
+
+<section id="trust-dial" class="reveal">
+  <div class="step-label">06 — THE DIAL</div>
+  <h2>Trust is a dial, not a promise.</h2>
+  <p class="section-sub">Each guard is a config flag. Turn the dial from fast to strict and the same pipeline demands more proof before money moves.</p>
+  <div class="dial-box">
+    <div class="tiers" id="tier-buttons" role="tablist" aria-label="trust profile"></div>
+    <div class="tier-note" id="tier-note">loading server profile…</div>
+    <div class="flags" id="flag-rows"></div>
+  </div>
+</section>
+
+<footer>
+  <p>LOCAL DEMO NETWORK — test USDC only, no real funds move. Cash-out receipts are MOCK, no anchor network is contacted.</p>
+  <p>AMANAH — the LLM reads, the policy decides, the chain enforces.</p>
+</footer>
+
 </div>
 <script>
-const S = 10000000;
-const usdc = a => (Number(a) / S).toLocaleString("en-US", {minimumFractionDigits: 2}) + " USDC";
+const STROOP = 10000000;
+const usdc = (a) => (Number(a) / STROOP).toLocaleString("en-US", { minimumFractionDigits: 2 }) + " USDC";
+const short = (h) => (h && h.length > 20 ? h.slice(0, 10) + "…" + h.slice(-8) : h || "");
+const el = (id) => document.getElementById(id);
 
-function render(state) {
-  const injected = state.decisions.some(d => d.decision === "refused" && d.codes.includes("INJECTION_SUSPECTED"));
-  document.getElementById("banner").classList.toggle("show", injected);
+const TX_STEP = {
+  create_intent: { what: "Escrowed on-chain", note: "funds locked, bound to this supplier only" },
+  attest_shipped: { what: "Oracle attests shipment", note: "signed delivery attestation recorded" },
+  attest_failed: { what: "Oracle attests failure", note: "delivery marked failed", alert: true },
+  release: { what: "RELEASED to bound supplier", note: "the only address the contract can pay" },
+  refund: { what: "Deadline lapsed → REVERT", note: "funds returned to Bu Sari, untouched", alert: true },
+};
 
+function renderInbox(state) {
+  const refusals = state.decisions.filter((d) => d.decision === "refused");
+  const cards = state.intents.map((i) => `
+    <div class="card">
+      <div class="ref">${i.invoice_ref || "—"}</div>
+      <div class="from">${i.supplier_name}</div>
+      <div class="amount">${usdc(i.amount)}</div>
+      <span class="chip ${i.status}">${i.status}</span>
+    </div>`);
+  cards.push(...refusals.map((d) => `
+    <div class="card">
+      <div class="ref">${d.detail || "unparsed document"}</div>
+      <div class="from">Claims a new payment address</div>
+      <div class="amount">—</div>
+      <span class="chip refused">refused</span>
+      <div class="memo">never became a transaction</div>
+    </div>`));
+  el("inbox-cards").innerHTML = cards.join("") || '<span class="chip">no invoices yet</span>';
+}
+
+function renderProposals(state) {
+  const cap = Number(state.rules.cap_per_tx);
+  el("proposal-cards").innerHTML = state.intents.map((i) => `
+    <div class="card">
+      <div class="ref">PROPOSAL · ${i.invoice_ref || ""}</div>
+      <div class="from">Pay ${i.supplier_name}</div>
+      <div class="amount">${usdc(i.amount)}</div>
+      <ul class="checklist">
+        <li>supplier in signed registry</li>
+        <li>under per-tx cap (${usdc(cap)})</li>
+        <li>request hash bound</li>
+      </ul>
+      <div class="hash"><b>hash</b> ${short(i.request_hash)}</div>
+    </div>`).join("") || '<span class="chip">no proposals yet</span>';
+}
+
+function renderBanner(state) {
+  const hits = state.decisions.filter(
+    (d) => d.decision === "refused" && d.codes.includes("INJECTION_SUSPECTED")
+  );
+  const banner = el("injection-banner");
+  banner.classList.toggle("armed", hits.length > 0);
+  if (!hits.length) return;
+  const d = hits[hits.length - 1];
+  el("banner-body").innerHTML = `
+    <p class="detail">Invoice <span class="mono">${d.detail || ""}</span> asked the agent to send funds to a
+    new, unregistered address. The scan flagged it, the policy layer refused, and <strong>no transaction was
+    ever proposed</strong>. Bu Sari's funds were never at risk.</p>
+    <div class="codes">${JSON.parse(d.codes).map((c) => `<span>${c}</span>`).join("")}</div>`;
+}
+
+function renderTimeline(state) {
   const txsByIntent = {};
   for (const t of state.chain_txs) (txsByIntent[t.intent_id] ||= []).push(t);
   const payoutsByIntent = {};
   for (const p of state.anchor_payouts) (payoutsByIntent[p.intent_id] ||= []).push(p);
 
-  document.getElementById("intents").innerHTML = state.intents.map(i => {
-    const txs = (txsByIntent[i.id] || []).map(t =>
-      `<li>${t.action} <span class="hash">${t.tx_hash || "(simulated)"}</span></li>`).join("");
-    return `<div class="intent ${i.status}">
-      <div>${i.supplier_name} &middot; <span class="amount">${usdc(i.amount)}</span>
-        <span class="status ${i.status}">${i.status}</span></div>
-      <div class="dim">${i.invoice_ref || ""} &middot; chain intent #${i.chain_intent_id ?? "—"}</div>
-      <ul class="tl">${txs}</ul></div>`;
-  }).join("") || '<span class="dim">no intents yet</span>';
-
-  document.getElementById("refusals").innerHTML = state.decisions
-    .filter(d => d.decision === "refused")
-    .map(d => `<div class="refused">&#10007; ${JSON.parse(d.codes).join(", ")} <span class="dim">${d.detail || ""}</span></div>`)
-    .join("") || '<span class="dim">none</span>';
-
-  document.getElementById("payouts").innerHTML = state.anchor_payouts.map(p =>
-    `<div class="receipt"><span class="mock">MOCK RECEIPT</span> &middot; not a real payout<br>
-     ref ${p.ref}<br><span class="amount">${usdc(p.amount)}</span> &rarr; <span class="dim">${p.address}</span></div>`
-  ).join("") || '<span class="dim">none</span>';
-
-  document.getElementById("rules").innerHTML =
-    `cap/tx ${usdc(state.rules.cap_per_tx)} &middot; cap/day ${usdc(state.rules.cap_daily)}<br>` +
-    `sme ${state.rules.sme_address}<br>token ${state.rules.token_address}`;
+  const escrowed = state.intents.filter((i) => txsByIntent[i.id]);
+  el("timeline-cards").innerHTML = escrowed.map((i) => {
+    const steps = [`
+      <li><div class="what">Proposed</div>
+      <div class="note">chain intent #${i.chain_intent_id ?? "—"} · ${i.invoice_ref || ""}</div></li>`];
+    for (const t of txsByIntent[i.id]) {
+      const s = TX_STEP[t.action] || { what: t.action, note: "" };
+      steps.push(`
+        <li${s.alert ? ' class="alert"' : ""}>
+          <div class="what${s.alert ? " alert-text" : ""}">${s.what}</div>
+          <div class="note">${s.note}</div>
+          <div class="hash"><b>tx</b> ${t.tx_hash || "(simulated)"}</div>
+        </li>`);
+    }
+    for (const p of payoutsByIntent[i.id] || []) {
+      steps.push(`
+        <li><div class="what">Cash-out receipt</div>
+        <div class="receipt"><b>MOCK</b> · ${p.ref} · ${usdc(p.amount)} → ${short(p.address)}</div></li>`);
+    }
+    return `
+      <div class="flow-card">
+        <div class="head">
+          <span class="from">${i.supplier_name}</span>
+          <span class="amount">${usdc(i.amount)}</span>
+          <span class="chip ${i.status}">${i.status}</span>
+        </div>
+        <ul class="steps">${steps.join("")}</ul>
+      </div>`;
+  }).join("") || '<span class="chip">nothing escrowed yet</span>';
 }
 
-function renderMonitor(metrics, events) {
-  document.getElementById("counters").innerHTML =
-    Object.entries(metrics.counters).map(([k, v]) => `<span class="ctr"><b>${v}</b>${k}</span>`).join("") +
-    `<span class="ctr"><b>${usdc(metrics.gauges.escrowed_value)}</b>escrowed</span>` +
-    `<span class="ctr"><b>${metrics.gauges.intents_open}</b>open</span>`;
+const COUNTER_VIEW = [
+  ["proposed", "proposed", ""],
+  ["refused", "refused", "alert"],
+  ["injection_blocked", "blocked", "alert"],
+  ["released", "released", "good"],
+  ["reverted", "reverted", "alert"],
+];
 
-  document.getElementById("events").innerHTML = events.slice(0, 40).map(e => {
-    const bad = e.name === "injection.blocked" || e.name === "guard.tripped" || e.name === "intent.refused";
-    const detail = e.payload.name || (e.payload.codes || []).join(",") || "";
-    return `<div class="ev"><span class="dim">${e.created_at.slice(11, 19)}</span>
-      <span class="name${bad ? " bad" : ""}">${e.name}</span> <span class="dim">${detail}</span></div>`;
-  }).join("") || '<span class="dim">no events yet</span>';
+function renderMonitor(m, events) {
+  el("counters").innerHTML =
+    COUNTER_VIEW.map(([k, label, cls]) =>
+      `<div class="counter ${cls}"><b>${m.counters[k]}</b><span>${label}</span></div>`).join("") +
+    `<div class="counter"><b>${(Number(m.gauges.escrowed_value) / STROOP).toLocaleString()}</b><span>USDC escrowed</span></div>` +
+    `<div class="counter"><b>${m.gauges.intents_open}</b><span>open</span></div>`;
+
+  el("events").innerHTML = events.slice(0, 60).map((e) => {
+    const bad = ["injection.blocked", "guard.tripped", "intent.refused"].includes(e.name);
+    const detail = e.payload.name || (e.payload.codes || []).join(",") || e.payload.intent_id || "";
+    return `<div class="ev"><span class="t">${e.created_at.slice(11, 19)}</span>
+      <span class="n${bad ? " bad" : ""}">${e.name}</span><span class="d">${detail}</span></div>`;
+  }).join("") || '<div class="ev"><span class="d">no events yet</span></div>';
+}
+
+const FLAG_META = [
+  ["injection_scan", "Injection scan", "normalize + flag redirect attempts"],
+  ["policy_engine", "Policy engine", "caps · registry · dedupe, deterministic"],
+  ["policy_signer", "Policy signer", "independent allowlist mirror"],
+  ["require_attestation", "Shipment attestation", "no release without oracle proof"],
+  ["k_of_n", "k-of-n oracles", "distinct attestations required"],
+  ["human_cosign_threshold", "Human co-sign", "large amounts wait for Bu Sari"],
+  ["proof_of_compute", "Proof of compute", "verifiable extraction receipt"],
+];
+const TIER_ORDER = ["fast", "balanced", "strict"];
+const dial = { profiles: null, flags: null, server: null };
+
+function flagLabel(key, v) {
+  if (key === "k_of_n") return `k = ${v}`;
+  if (key === "human_cosign_threshold") return v > 0 ? `> ${Number(v) / STROOP} USDC` : "off";
+  return v ? "on" : "off";
+}
+
+function matchedTier() {
+  for (const name of TIER_ORDER) {
+    const p = dial.profiles[name];
+    if (Object.keys(p).every((k) => dial.flags[k] === p[k])) return name;
+  }
+  return "custom";
+}
+
+function renderDial() {
+  const tier = matchedTier();
+  el("tier-buttons").innerHTML = TIER_ORDER.map((name) =>
+    `<button role="tab" aria-selected="${name === tier}" class="${name === tier ? "on" : ""}"
+       onclick="setTier('${name}')">${name}</button>`).join("");
+  el("tier-note").textContent =
+    `current: ${tier.toUpperCase()} · server booted as: ${dial.server.toUpperCase()} · click a flag to tune`;
+  el("flag-rows").innerHTML = FLAG_META.map(([key, name, desc]) => {
+    const v = dial.flags[key];
+    const on = key === "k_of_n" ? v > 1 : Boolean(v);
+    return `<div class="flag-row ${on ? "on" : ""}" onclick="toggleFlag('${key}')" role="switch"
+      aria-checked="${on}" tabindex="0" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();toggleFlag('${key}')}">
+      <div><div class="name">${name}</div><div class="desc">${desc}</div></div>
+      <span class="flag-val">${flagLabel(key, v)}</span></div>`;
+  }).join("");
+}
+
+function setTier(name) {
+  Object.assign(dial.flags, dial.profiles[name]);
+  renderDial();
+}
+
+function toggleFlag(key) {
+  if (key === "k_of_n") dial.flags[key] = dial.flags[key] >= 3 ? 1 : dial.flags[key] + 1;
+  else if (key === "human_cosign_threshold") dial.flags[key] = dial.flags[key] > 0 ? 0 : 1000000000;
+  else dial.flags[key] = !dial.flags[key];
+  renderDial();
+}
+
+function initDial(trust) {
+  if (dial.profiles) return;
+  dial.profiles = trust.profiles;
+  dial.flags = { ...trust.flags };
+  dial.server = trust.profile;
+  renderDial();
 }
 
 async function poll() {
   try {
     const res = await fetch("/api/state");
-    if (res.ok) render(await res.json());
+    if (res.ok) {
+      const state = await res.json();
+      renderInbox(state);
+      renderProposals(state);
+      renderBanner(state);
+      renderTimeline(state);
+      if (state.trust) initDial(state.trust);
+    }
     const [m, e] = await Promise.all([fetch("/api/metrics"), fetch("/api/events")]);
     if (m.ok && e.ok) renderMonitor(await m.json(), await e.json());
-  } catch (e) { /* network hiccup; next poll retries */ }
+  } catch (err) { /* network hiccup; next poll retries */ }
 }
 poll();
 setInterval(poll, 2000);
+
+const io = new IntersectionObserver((entries) => {
+  for (const en of entries) if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+}, { threshold: 0.12 });
+document.querySelectorAll(".reveal").forEach((n) => io.observe(n));
 </script>
 </body>
 </html>
