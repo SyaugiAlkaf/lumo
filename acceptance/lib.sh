@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Shared helpers for the Amanah acceptance oracle.
 
-ESCROW_EXPECTED_PASS=12
+ESCROW_EXPECTED_PASS=14
+WORKSPACE_EXPECTED_PASS=22
 
 preflight() {
     local missing=0
@@ -32,5 +33,26 @@ assert_cargo_passed() {
         return 1
     fi
     echo "OK: $passed tests passed (>= $expected)"
+    return 0
+}
+
+# Workspace variant: sums every "N passed" line across all test binaries.
+# $1 = minimum expected total, $2 = captured cargo output.
+assert_cargo_workspace_passed() {
+    local expected="$1" log="$2" total
+    total=$(grep -oE '[0-9]+ passed' "$log" | grep -oE '[0-9]+' | paste -sd+ - | bc)
+    if [ -z "$total" ]; then
+        echo "FAIL: no 'N passed' line in cargo output — compile error or zero-match filter"
+        return 1
+    fi
+    if grep -qE '[1-9][0-9]* failed' "$log"; then
+        echo "FAIL: cargo reported failing tests"
+        return 1
+    fi
+    if [ "$total" -lt "$expected" ]; then
+        echo "FAIL: expected >= $expected tests passed, got $total"
+        return 1
+    fi
+    echo "OK: $total tests passed across workspace (>= $expected)"
     return 0
 }

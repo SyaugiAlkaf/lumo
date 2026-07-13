@@ -1,8 +1,8 @@
 #![cfg(test)]
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger},
-    token, Address, BytesN, Env,
+    testutils::{Address as _, Ledger, MockAuth, MockAuthInvoke},
+    token, Address, BytesN, Env, IntoVal,
 };
 
 const AMOUNT: i128 = 1_000;
@@ -203,6 +203,44 @@ fn t5_attest_from_unregistered_oracle_is_rejected() {
         Err(Ok(Error::NotOracle))
     );
     assert_eq!(f.client.get_intent(&id).unwrap().attestation, Attestation::None);
+}
+
+#[test]
+fn t5_removed_oracle_is_rejected() {
+    let f = setup();
+    f.client.remove_oracle(&f.oracle);
+    let id = fund(&f);
+
+    assert_eq!(
+        f.client.try_attest(&id, &f.oracle, &AttestKind::Shipped),
+        Err(Ok(Error::NotOracle))
+    );
+    assert_eq!(f.client.get_intent(&id).unwrap().attestation, Attestation::None);
+}
+
+#[test]
+fn t5_non_admin_cannot_add_oracle() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let contract_id = env.register(AmanahEscrow, (admin,));
+    let client = AmanahEscrowClient::new(&env, &contract_id);
+    let stranger = Address::generate(&env);
+    let oracle = Address::generate(&env);
+
+    let res = client
+        .mock_auths(&[MockAuth {
+            address: &stranger,
+            invoke: &MockAuthInvoke {
+                contract: &contract_id,
+                fn_name: "add_oracle",
+                args: (oracle.clone(),).into_val(&env),
+                sub_invokes: &[],
+            },
+        }])
+        .try_add_oracle(&oracle);
+
+    assert!(res.is_err());
+    assert!(!client.is_oracle(&oracle));
 }
 
 #[test]
