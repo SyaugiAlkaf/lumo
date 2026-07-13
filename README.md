@@ -244,13 +244,38 @@ acceptance/acceptance.sh             # full re-run, T1-T10
 
 ## Testnet deployment
 
-Not deployed. `scripts/deploy_testnet.sh` prints the manual checklist for a
-real Stellar testnet deploy and exits `1` — it is a human-run STOP boundary,
-not called by any gate, script, or Makefile target. A deployed contract
-address will be added here only after that checklist is completed by hand.
+Deployed to the **Stellar testnet** (`Test SDF Network ; September 2015`) — a
+valueless public test network. No mainnet asset is referenced and no real funds
+move; the cash-out anchor stays structurally mocked (`amanah/anchor/mock_anchor.py`).
+
+| Artifact | Value |
+|---|---|
+| Network | `testnet` |
+| `amanah-escrow` | [`CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK`](https://stellar.expert/explorer/testnet/contract/CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK) |
+| `amanah-policy-account` | [`CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS`](https://stellar.expert/explorer/testnet/contract/CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS) |
+| Escrow admin + oracle | `GBPSOKJDBP5REZBCL6TWAXMU6CEWV5YMU3PMQUSDRGJM6K77TZHGGEEY` |
+| Policy owner (SME ed25519, hex) | `12265b095264b6a939bac5e35e7144fd0c3c8de5d44336e8799e4e0a9edf164b` |
+| Policy per-tx cap | `50000000000` stroops (5,000 test USDC) |
+| Test USDC SAC | [`CDWS5VFOIDNU7X3O4CXNF2I5TMGT5RKLB4GDHU24VOO7FRGGI3XYTQC7`](https://stellar.expert/explorer/testnet/contract/CDWS5VFOIDNU7X3O4CXNF2I5TMGT5RKLB4GDHU24VOO7FRGGI3XYTQC7) |
+
+The USDC used here is a **self-issued testnet asset** (`USDC:GC5U5EI2…`), never a
+mainnet asset. One full end-to-end smoke ran on-chain — `create_intent` →
+`attest(Shipped)` → `release` — pulling 100 test USDC into escrow and settling it
+to the bound supplier only:
+
+| Step | Transaction |
+|---|---|
+| `add_oracle` | [`fe803970…`](https://stellar.expert/explorer/testnet/tx/fe8039705d83d4732edb3915f1d258b330ff6c9ebf2942c34351e2fe462ed0b6) |
+| `create_intent` | [`88b5b770…`](https://stellar.expert/explorer/testnet/tx/88b5b7701d4013893ae063e20fd6f42944d9bac04dd290a3a19d32d09244c4a1) |
+| `attest(Shipped)` | [`e948634a…`](https://stellar.expert/explorer/testnet/tx/e948634a0cf4e6e3fb7cdda1af21fdb0b0a1db742797a3a8d0aa7612f8a03391) |
+| `release` | [`0b5d14a5…`](https://stellar.expert/explorer/testnet/tx/0b5d14a535d0fd7ae03b40eccf14205c042d606c4c2c0675ef0ce47265956f4f) |
+
+Re-deploying is a deliberate, human-run action — `scripts/deploy_testnet.sh`
+prints the checklist and exits `1`; no gate, script, or Makefile target
+automates it.
 
 ## Out of scope
 
-Real anchor/off-ramp integration, mainnet deployment, KYC/licensing, and
-testnet submission are outside this build — see `scripts/deploy_testnet.sh`
-for what a real deploy would require.
+Real anchor/off-ramp integration, mainnet deployment, and KYC/licensing are
+outside this build — see `scripts/deploy_testnet.sh` for what a real (mainnet)
+deploy would require.
