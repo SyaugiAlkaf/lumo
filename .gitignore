@@ -1,0 +1,37 @@
+# Rust / Soroban
+/target
+**/target
+*.wasm
+Cargo.lock.bak
+**/test_snapshots/
+
+# Stellar keys / identity (never commit)
+.soroban
+.stellar
+*.key
+identities/
+
+# Python (later phases)
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+
+# Planning artifacts — never commit
+CLAUDE.md
+HANDOFF.md
+GOALS.md
+PLAN.md
+IDEAS.md
+ROADMAP.md
+MVP_SCOPE.md
+auto_handoff_latest.md
+docs/ops/
+docs/daily/
+customers/
+.claude/
