@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Amanah — SME Treasury Agent</title>
+<style>
+  :root { --bg:#0f1419; --card:#1a2129; --text:#e6e1cf; --dim:#8a919b; --green:#7fd962; --red:#f07178; --amber:#ffb454; --blue:#59c2ff; }
+  body { background:var(--bg); color:var(--text); font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; margin:0; padding:24px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--dim); margin-bottom:20px; }
+  .banner { display:none; background:#3d1518; border:1px solid var(--red); color:var(--red); padding:12px 16px; border-radius:6px; margin-bottom:16px; font-weight:bold; }
+  .banner.show { display:block; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .card { background:var(--card); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin:0 0 12px; }
+  .intent { border-left:3px solid var(--dim); padding:8px 12px; margin-bottom:12px; }
+  .intent.escrowed { border-color:var(--amber); }
+  .intent.released { border-color:var(--green); }
+  .intent.reverted { border-color:var(--red); }
+  .status { font-weight:bold; text-transform:uppercase; font-size:11px; padding:2px 8px; border-radius:4px; background:#333; }
+  .status.escrowed { color:var(--amber); } .status.released { color:var(--green); }
+  .status.reverted { color:var(--red); } .status.proposed { color:var(--blue); }
+  .tl { list-style:none; margin:8px 0 0; padding:0; }
+  .tl li { padding:2px 0; color:var(--dim); }
+  .tl .hash { color:var(--blue); font-size:11px; word-break:break-all; }
+  .refused { color:var(--red); }
+  .receipt { border:2px dashed var(--amber); border-radius:6px; padding:12px; margin-top:8px; }
+  .receipt .mock { color:var(--amber); font-weight:bold; font-size:16px; }
+  .amount { color:var(--green); }
+  .dim { color:var(--dim); font-size:12px; }
+</style>
+</head>
+<body>
+<h1>Amanah — treasury agent for Sari Craft Export</h1>
+<div class="sub">untrusted LLM reads &middot; deterministic policy decides &middot; Soroban enforces &middot; local network</div>
+<div id="banner" class="banner">&#9888; INJECTION SUSPECTED — invoice refused, no transaction was proposed</div>
+<div class="grid">
+  <div>
+    <div class="card"><h2>Payment intents</h2><div id="intents"><span class="dim">no intents yet</span></div></div>
+    <div class="card"><h2>Refusals</h2><div id="refusals"><span class="dim">none</span></div></div>
+  </div>
+  <div>
+    <div class="card"><h2>Cash-out receipts (mock anchor)</h2><div id="payouts"><span class="dim">none</span></div></div>
+    <div class="card"><h2>Policy</h2><div id="rules" class="dim"></div></div>
+  </div>
+</div>
+<script>
+const S = 10000000;
+const usdc = a => (Number(a) / S).toLocaleString("en-US", {minimumFractionDigits: 2}) + " USDC";
+
+function render(state) {
+  const injected = state.decisions.some(d => d.decision === "refused" && d.codes.includes("INJECTION_SUSPECTED"));
+  document.getElementById("banner").classList.toggle("show", injected);
+
+  const txsByIntent = {};
+  for (const t of state.chain_txs) (txsByIntent[t.intent_id] ||= []).push(t);
+  const payoutsByIntent = {};
+  for (const p of state.anchor_payouts) (payoutsByIntent[p.intent_id] ||= []).push(p);
+
+  document.getElementById("intents").innerHTML = state.intents.map(i => {
+    const txs = (txsByIntent[i.id] || []).map(t =>
+      `<li>${t.action} <span class="hash">${t.tx_hash || "(simulated)"}</span></li>`).join("");
+    return `<div class="intent ${i.status}">
+      <div>${i.supplier_name} &middot; <span class="amount">${usdc(i.amount)}</span>
+        <span class="status ${i.status}">${i.status}</span></div>
+      <div class="dim">${i.invoice_ref || ""} &middot; chain intent #${i.chain_intent_id ?? "—"}</div>
+      <ul class="tl">${txs}</ul></div>`;
+  }).join("") || '<span class="dim">no intents yet</span>';
+
+  document.getElementById("refusals").innerHTML = state.decisions
+    .filter(d => d.decision === "refused")
+    .map(d => `<div class="refused">&#10007; ${JSON.parse(d.codes).join(", ")} <span class="dim">${d.detail || ""}</span></div>`)
+    .join("") || '<span class="dim">none</span>';
+
+  document.getElementById("payouts").innerHTML = state.anchor_payouts.map(p =>
+    `<div class="receipt"><span class="mock">MOCK RECEIPT</span> &middot; not a real payout<br>
+     ref ${p.ref}<br><span class="amount">${usdc(p.amount)}</span> &rarr; <span class="dim">${p.address}</span></div>`
+  ).join("") || '<span class="dim">none</span>';
+
+  document.getElementById("rules").innerHTML =
+    `cap/tx ${usdc(state.rules.cap_per_tx)} &middot; cap/day ${usdc(state.rules.cap_daily)}<br>` +
+    `sme ${state.rules.sme_address}<br>token ${state.rules.token_address}`;
+}
+
+async function poll() {
+  try {
+    const res = await fetch("/api/state");
+    if (res.ok) render(await res.json());
+  } catch (e) { /* network hiccup; next poll retries */ }
+}
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>

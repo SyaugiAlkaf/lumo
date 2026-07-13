@@ -60,6 +60,57 @@ class Repo:
         rows = self.conn.execute("SELECT request_hash FROM intents").fetchall()
         return {r["request_hash"] for r in rows}
 
+    def intent(self, intent_id: str) -> sqlite3.Row | None:
+        return self.conn.execute(
+            "SELECT * FROM intents WHERE id = ?", (intent_id,)
+        ).fetchone()
+
+    def supplier_by_id(self, supplier_id: str) -> sqlite3.Row | None:
+        return self.conn.execute(
+            "SELECT * FROM suppliers WHERE id = ?", (supplier_id,)
+        ).fetchone()
+
+    def set_chain_intent(self, intent_id: str, chain_intent_id: int) -> None:
+        self.conn.execute(
+            "UPDATE intents SET chain_intent_id = ? WHERE id = ?",
+            (chain_intent_id, intent_id),
+        )
+        self.conn.commit()
+
+    def mark_released(self, intent_id: str) -> None:
+        self.conn.execute(
+            "UPDATE intents SET status = 'released' WHERE id = ?", (intent_id,)
+        )
+        self.conn.commit()
+
+    def add_chain_tx(self, intent_id: str, action: str, tx_hash: str | None) -> None:
+        self.conn.execute(
+            "INSERT INTO chain_txs (id, intent_id, action, tx_hash) VALUES (?, ?, ?, ?)",
+            (ulid.new(), intent_id, action, tx_hash),
+        )
+        self.conn.commit()
+
+    def chain_txs(self, intent_id: str) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM chain_txs WHERE intent_id = ? ORDER BY created_at",
+            (intent_id,),
+        ).fetchall()
+
+    def add_anchor_payout(
+        self, intent_id: str, ref: str, amount: str, address: str
+    ) -> None:
+        self.conn.execute(
+            "INSERT INTO anchor_payouts (id, intent_id, ref, amount, address) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (ulid.new(), intent_id, ref, amount, address),
+        )
+        self.conn.commit()
+
+    def anchor_payouts(self) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM anchor_payouts ORDER BY created_at"
+        ).fetchall()
+
     def intent_count(self) -> int:
         return self.conn.execute("SELECT count(*) AS n FROM intents").fetchone()["n"]
 

@@ -16,14 +16,25 @@ def test_migrate_up_creates_schema(conn):
         r["name"]
         for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
-    assert {"suppliers", "policy_rules", "intents", "decisions"} <= tables
-    assert migrate.applied(conn) == ["0001_registry", "0002_intents_audit"]
+    assert {
+        "suppliers",
+        "policy_rules",
+        "intents",
+        "decisions",
+        "chain_txs",
+        "anchor_payouts",
+    } <= tables
+    assert migrate.applied(conn) == [
+        "0001_registry",
+        "0002_intents_audit",
+        "0003_chain_anchor",
+    ]
 
 
 def test_migrate_down_reverts_all(db_path):
     conn = connect(db_path)
     migrate.up(conn)
-    migrate.down(conn, steps=2)
+    migrate.down(conn, steps=3)
     tables = {
         r["name"]
         for r in conn.execute(

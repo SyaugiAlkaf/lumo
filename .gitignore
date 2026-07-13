@@ -35,3 +35,6 @@ docs/ops/
 docs/daily/
 customers/
 .claude/
+
+# Local demo state (deploy IDs, demo db, generated invoices)
+.amanah_local/

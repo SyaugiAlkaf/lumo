@@ -124,10 +124,17 @@ gate_p2() {
     echo "NOTE: live-model check is human-triggered: make live-check (never a loop gate)"
 }
 
+gate_p3() {
+    echo "== Amanah acceptance :: gate P3 (e2e spine + mock anchor) =="
+    "$HERE/t10_e2e.sh" || { echo "GATE P3: FAIL"; exit 1; }
+    echo "GATE P3: PASS (T10 green)"
+}
+
 case "$GATE" in
     P0) gate_p0 ;;
     P1) gate_p1 ;;
     P2) gate_p2 ;;
-    "") echo "usage: acceptance.sh --gate P0|P1|P2" >&2; exit 2 ;;
+    P3) gate_p3 ;;
+    "") echo "usage: acceptance.sh --gate P0|P1|P2|P3" >&2; exit 2 ;;
     *)  echo "gate '$GATE' not implemented" >&2; exit 2 ;;
 esac
