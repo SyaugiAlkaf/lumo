@@ -1,0 +1,16 @@
+services:
+  lumo:
+    build: .
+    image: lumo:latest
+    ports:
+      - "8788:8788"
+    environment:
+      # Trust layer only; the chain adapter is mocked in this image.
+      LUMO_CHAIN_ADAPTER: mock
+      LUMO_PROVIDER: mock
+    volumes:
+      - lumo-data:/data
+    restart: unless-stopped
+
+volumes:
+  lumo-data:

@@ -161,6 +161,13 @@ returned by `/testnet/info`, so a clean invoice settles on-chain and a tampered
 one is refused before anything is signed. Nothing here touches mainnet or real
 funds.
 
+<p align="center">
+  <img src="docs/tester-proposed.png" alt="Proposed: a clean invoice settles with a real create_intent, attest and release trail" width="49%">
+  <img src="docs/tester-refused.png" alt="Refused: a prompt-injected invoice is blocked with zero transactions" width="49%">
+</p>
+
+<p align="center"><sub><b>Left</b> — a clean invoice is escrowed, attested and released: three real testnet transactions to the approved payee.&nbsp;&nbsp;<b>Right</b> — a prompt-injected invoice is refused by the policy layer (<code>INJECTION_SUSPECTED · ADDRESS_MISMATCH</code>) and <b>zero</b> transactions are signed. The agent was fooled; the money never moved.</sub></p>
+
 ## Integrate
 
 Deeper walkthrough with every option: [`docs/integration.md`](docs/integration.md).
@@ -189,6 +196,23 @@ curl -X POST http://127.0.0.1:8788/v1/intents \
   -H 'Content-Type: application/json' \
   -d '{"invoice": "INVOICE INV-2026-0042\nFrom: CV Batik Nusantara\nAmount due: 1,250.00 USDC\n"}'
 ```
+
+### Run it as a microservice (Docker)
+
+Drop the trust layer into any stack as a container:
+
+```bash
+docker compose up --build      # REST API on http://127.0.0.1:8788
+# or:
+docker build -t lumo . && docker run -p 8788:8788 lumo
+```
+
+The image ships the REST API plus the deterministic guard chain (injection
+scan, per-tx cap, supplier allowlist, attestation gating) with the chain
+adapter in **`mock`** mode — no keys, safe to publish. Callers get the payment
+*decision* as a service and wire their own chain/signer. For real on-chain
+settlement, extend the image with the `stellar` CLI and a mounted keystore,
+then set `LUMO_CHAIN_ADAPTER=soroban` (see the `Dockerfile` header).
 
 ### Use from any AI agent
 
