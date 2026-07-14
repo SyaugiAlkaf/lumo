@@ -34,7 +34,7 @@ button{font-family:inherit}
 
   <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:30px">
     <div style="display:flex;align-items:center;gap:13px">
-      <img src="/lumo-mark-mono.png" alt="Lumo" width="40" height="40" style="width:40px;height:40px;filter:drop-shadow(0 6px 14px rgba(18,20,28,.16)) drop-shadow(0 0 22px rgba(245,193,90,.5))">
+      <img src="/lumo-mark.png" alt="Lumo" width="40" height="40" style="width:40px;height:40px;filter:drop-shadow(0 6px 14px rgba(18,20,28,.16)) drop-shadow(0 0 22px rgba(245,193,90,.5))">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <a href="/" style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:600;letter-spacing:.12em;padding-left:.12em;line-height:1;color:var(--ink)">LUM<span style="color:var(--gold-deep)">O</span></a>
         <span style="font-size:12.5px;color:var(--faint);letter-spacing:.01em">· testnet test tool</span>
@@ -95,10 +95,57 @@ button{font-family:inherit}
 </div>
 </div>
 
+<div id="lumo-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(18,20,28,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:clamp(14px,3vw,34px)">
+  <div style="width:100%;max-width:1020px;height:100%;max-height:760px;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 50px 120px -30px rgba(16,19,28,.7);display:flex;flex-direction:column;border:1px solid rgba(18,20,28,.1)">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#F4F1EA;border-bottom:1px solid rgba(18,20,28,.1)">
+      <div style="display:flex;gap:6px;padding-left:4px"><span style="width:11px;height:11px;border-radius:50%;background:#D0433C"></span><span style="width:11px;height:11px;border-radius:50%;background:#F5C15A"></span><span style="width:11px;height:11px;border-radius:50%;background:#2E7BFF"></span></div>
+      <div style="flex:1;display:flex;align-items:center;gap:8px;min-width:0;background:#fff;border:1px solid rgba(18,20,28,.12);border-radius:9px;padding:7px 12px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A8F9C" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+        <span id="lumo-modal-url" style="font:400 12px 'JetBrains Mono',monospace;color:#565B69;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span>
+      </div>
+      <a id="lumo-modal-open" href="#" target="_blank" rel="noopener" style="flex:0 0 auto;font:600 12.5px 'Hanken Grotesk',sans-serif;color:#fff;background:#2E7BFF;padding:9px 15px;border-radius:9px">Open ↗</a>
+      <button type="button" onclick="lumoProofClose()" style="flex:0 0 auto;cursor:pointer;width:33px;height:33px;border:1px solid rgba(18,20,28,.14);background:#fff;border-radius:9px;color:#12141C;font-size:15px;line-height:1">✕</button>
+    </div>
+    <div style="flex:1;position:relative;background:#fff">
+      <div id="lumo-modal-loading" style="position:absolute;inset:0;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;text-align:center">
+        <div style="width:30px;height:30px;border-radius:50%;border:3px solid rgba(46,123,255,.25);border-top-color:#2E7BFF;animation:spin .8s linear infinite"></div>
+        <div style="font:500 14px 'Hanken Grotesk',sans-serif;color:#565B69">Loading <span id="lumo-modal-title" style="color:#12141C"></span> on Stellar Expert…</div>
+        <div style="font:400 12.5px/1.5 'Hanken Grotesk',sans-serif;color:#8A8F9C;max-width:340px">Taking a moment? Use <span style="color:#2E7BFF;font-weight:600">Open ↗</span> to view it in a new tab.</div>
+      </div>
+      <iframe id="lumo-modal-iframe" src="about:blank" style="position:relative;z-index:1;width:100%;height:100%;border:0" referrerpolicy="no-referrer" title="Stellar Expert"></iframe>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   var info = null, cap = null, running = false;
   var $ = function (id) { return document.getElementById(id); };
+
+  function lumoProof(e, el, title) {
+    if (e) e.preventDefault();
+    var url = (el && el.href) ? el.href : el;
+    $('lumo-modal-url').textContent = url;
+    $('lumo-modal-title').textContent = title || '';
+    $('lumo-modal-open').href = url;
+    $('lumo-modal-loading').style.display = 'flex';
+    $('lumo-modal-iframe').src = url;
+    $('lumo-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    return false;
+  }
+  function lumoProofClose() {
+    $('lumo-modal').style.display = 'none';
+    $('lumo-modal-iframe').src = 'about:blank';
+    document.body.style.overflow = '';
+  }
+  window.lumoProof = lumoProof;
+  window.lumoProofClose = lumoProofClose;
+  $('lumo-modal-iframe').addEventListener('load', function () {
+    if (this.src && this.src !== 'about:blank') $('lumo-modal-loading').style.display = 'none';
+  });
+  $('lumo-modal').addEventListener('click', function (e) { if (e.target === this) lumoProofClose(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lumoProofClose(); });
   var EXPLORER_TX = "https://stellar.expert/explorer/testnet/tx/";
   var EXPLORER_CT = "https://stellar.expert/explorer/testnet/contract/";
 
@@ -210,7 +257,7 @@ button{font-family:inherit}
   function showIdle() {
     $("panel").innerHTML =
       '<div style="flex:1;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:17px;border:1px dashed color-mix(in srgb,var(--ink) 15%, transparent);border-radius:15px;padding:32px">' +
-      '<img src="/lumo-mark-mono.png" alt="" width="54" height="54" style="width:54px;height:54px;opacity:.42">' +
+      '<img src="/lumo-mark.png" alt="" width="54" height="54" style="width:54px;height:54px;opacity:.42">' +
       '<div><div style="font-size:15px;font-weight:600;margin-bottom:6px">Nothing has run yet</div>' +
       '<div style="font-size:13px;color:var(--faint);max-width:290px;line-height:1.55">Pick an invoice — or edit it — then run it on Stellar testnet to see what the contracts allow.</div></div></div>';
   }
@@ -264,7 +311,7 @@ button{font-family:inherit}
     var contractRow =
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;border-radius:10px;background:#FBFAF7;border:1px solid var(--line)">' +
       '<span style="font-size:10.5px;color:var(--faint);letter-spacing:.05em;text-transform:uppercase">Escrow contract</span>' +
-      '<a href="' + EXPLORER_CT + escrow + '" target="_blank" rel="noopener" style="font-family:\'JetBrains Mono\',monospace;font-size:12px;display:inline-flex;align-items:center;gap:5px">' +
+      '<a href="' + EXPLORER_CT + escrow + '" target="_blank" rel="noopener" onclick="return lumoProof(event,this,\'Escrow contract\')" style="font-family:\'JetBrains Mono\',monospace;font-size:12px;display:inline-flex;align-items:center;gap:5px">' +
       shortId(escrow) + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a></div>';
 
     var n = 0;
@@ -275,7 +322,7 @@ button{font-family:inherit}
         '<div style="flex:1;min-width:0;padding-top:1px">' +
         '<div style="font-family:\'JetBrains Mono\',monospace;font-size:13px;font-weight:600;color:var(--ink)">' + esc(tx.step) + "</div>" +
         '<div style="font-size:12px;color:var(--muted);margin:2px 0 8px;line-height:1.4">' + (STEP_DESC[tx.step] || "") + "</div>" +
-        '<a href="' + esc(tx.url) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-family:\'JetBrains Mono\',monospace;font-size:11.5px;padding:5px 10px;border-radius:8px;background:color-mix(in srgb,var(--accent) 7%, #fff);border:1px solid color-mix(in srgb,var(--accent) 16%, transparent)">' +
+        '<a href="' + esc(tx.url) + '" target="_blank" rel="noopener" onclick="return lumoProof(event,this,\'' + esc(tx.step) + '\')" style="display:inline-flex;align-items:center;gap:6px;font-family:\'JetBrains Mono\',monospace;font-size:11.5px;padding:5px 10px;border-radius:8px;background:color-mix(in srgb,var(--accent) 7%, #fff);border:1px solid color-mix(in srgb,var(--accent) 16%, transparent)">' +
         shortId(tx.hash) + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a></div></div>';
     }).join("");
 
