@@ -21,23 +21,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
-name = "lumo-escrow"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "lumo-policy-account"
-version = "0.1.0"
-dependencies = [
- "lumo-escrow",
- "ed25519-dalek 1.0.1",
- "rand 0.7.3",
- "soroban-sdk",
-]
-
-[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1000,6 +983,23 @@ name = "log"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+
+[[package]]
+name = "lumo-escrow"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "lumo-policy-account"
+version = "0.1.0"
+dependencies = [
+ "ed25519-dalek 1.0.1",
+ "lumo-escrow",
+ "rand 0.7.3",
+ "soroban-sdk",
+]
 
 [[package]]
 name = "macro-string"

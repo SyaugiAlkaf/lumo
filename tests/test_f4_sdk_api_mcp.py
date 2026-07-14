@@ -225,13 +225,13 @@ def test_api_openapi_doc(api):
 
 def test_api_webhook_register_and_fires(api):
     client, sink, _ = api
-    res = client.post("/v1/webhooks", json={"url": "http://hooks.example.com/lumo"})
+    res = client.post("/v1/webhooks", json={"url": "http://8.8.8.8/lumo"})
     assert res.status_code == 200
-    assert res.json() == {"urls": ["http://hooks.example.com/lumo"]}
+    assert res.json() == {"urls": ["http://8.8.8.8/lumo"]}
 
     client.post("/v1/intents", json={"invoice": load_invoice("clean_in_policy.txt")})
     assert any(
-        url == "http://hooks.example.com/lumo" and body["name"] == "intent.proposed"
+        url == "http://8.8.8.8/lumo" and body["name"] == "intent.proposed"
         for url, body in sink.deliveries
     )
 

@@ -54,6 +54,15 @@ POLICY_ID=$(stellar contract deploy \
     -- --owner "$SME_PUBKEY_HEX" --cap_per_tx "$CAP_PER_TX")
 echo "policy $POLICY_ID"
 
+# Money-safety: bind the policy account to the one escrow it is allowed to fund.
+# Until this is set the account authorizes NO token transfer (fail-closed), and
+# once set it authorizes a transfer only when the recipient is this escrow — so a
+# compromised agent cannot move funds to any other address.
+stellar contract invoke \
+    --id "$POLICY_ID" --source-account lumo-admin --network "$NETWORK" \
+    -- set_escrow --escrow "$ESCROW_ID"
+echo "policy bound to escrow $ESCROW_ID"
+
 echo "-- wrap USDC as SAC --"
 USDC_SAC=$(stellar contract asset deploy \
     --asset "USDC:$ISSUER_ADDR" \

@@ -15,6 +15,7 @@ pub enum Error {
     SupplierNotApproved = 3,
     BadSignature = 4,
     InvalidArgs = 5,
+    RecipientNotAllowed = 6,
 }
 
 #[contracttype]
@@ -29,6 +30,7 @@ pub struct Ed25519Signature {
 enum Key {
     Owner,
     Cap,
+    Escrow,
     Supplier(Address),
 }
 
@@ -42,6 +44,7 @@ const BUMP_EXTEND: u32 = 90 * DAY_LEDGERS;
 const CREATE_INTENT_SUPPLIER: u32 = 1;
 const CREATE_INTENT_AMOUNT: u32 = 3;
 // token::transfer(from, to, amount).
+const TRANSFER_TO: u32 = 1;
 const TRANSFER_AMOUNT: u32 = 2;
 
 #[contract]
@@ -70,6 +73,17 @@ impl PolicyAccount {
     pub fn set_cap(env: Env, cap_per_tx: i128) {
         env.current_contract_address().require_auth();
         env.storage().instance().set(&Key::Cap, &cap_per_tx);
+    }
+
+    // The one escrow this account is allowed to fund. Until it is set, no token
+    // transfer is authorized at all (fail-closed).
+    pub fn set_escrow(env: Env, escrow: Address) {
+        env.current_contract_address().require_auth();
+        env.storage().instance().set(&Key::Escrow, &escrow);
+    }
+
+    pub fn escrow(env: Env) -> Option<Address> {
+        env.storage().instance().get(&Key::Escrow)
     }
 
     pub fn owner(env: Env) -> BytesN<32> {
@@ -124,6 +138,7 @@ fn check_context(env: &Env, ctx: Context, curr: &Address, cap: i128) -> Result<(
         if c.fn_name == Symbol::new(env, "add_supplier")
             || c.fn_name == Symbol::new(env, "remove_supplier")
             || c.fn_name == Symbol::new(env, "set_cap")
+            || c.fn_name == Symbol::new(env, "set_escrow")
         {
             return Ok(());
         }
@@ -139,6 +154,19 @@ fn check_context(env: &Env, ctx: Context, curr: &Address, cap: i128) -> Result<(
     }
 
     if c.fn_name == Symbol::new(env, "transfer") {
+        // The ONLY transfer this account authorizes is the sme -> escrow funding
+        // leg of create_intent. Binding `to` to the configured escrow means a
+        // compromised agent — even holding a valid owner signature — cannot move
+        // funds to an attacker or a fake escrow. Fail closed if no escrow is set.
+        let escrow: Address = env
+            .storage()
+            .instance()
+            .get(&Key::Escrow)
+            .ok_or(Error::RecipientNotAllowed)?;
+        let to: Address = arg(env, &c.args, TRANSFER_TO)?;
+        if to != escrow {
+            return Err(Error::RecipientNotAllowed);
+        }
         return cap_ok(arg(env, &c.args, TRANSFER_AMOUNT)?, cap);
     }
 

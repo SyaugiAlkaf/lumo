@@ -95,6 +95,35 @@ class Repo:
             "SELECT * FROM suppliers WHERE id = ?", (supplier_id,)
         ).fetchone()
 
+    def claim_escrow(self, intent_id: str) -> bool:
+        """Atomically reserve a proposed intent for on-chain escrow.
+
+        Returns True only if this call transitioned the intent from 'proposed'
+        to 'escrowed'. A concurrent or retried caller gets False and must not
+        submit again — this single conditional UPDATE is what prevents a double
+        on-chain escrow of the same invoice. ('escrowed' doubles as the in-flight
+        marker; the status CHECK constraint has no distinct 'escrowing' state.)
+        """
+        with self.conn:
+            cur = self.conn.execute(
+                "UPDATE intents SET status = 'escrowed' "
+                "WHERE id = ? AND status = 'proposed'",
+                (intent_id,),
+            )
+        return cur.rowcount == 1
+
+    def release_escrow_claim(self, intent_id: str) -> None:
+        """Return a claimed-but-not-submitted intent to 'proposed' so a genuine
+        retry can proceed. Reopens only when no chain intent exists — once an
+        on-chain escrow was created the claim is never released (a retry must
+        reconcile against that escrow, not create a second one)."""
+        with self.conn:
+            self.conn.execute(
+                "UPDATE intents SET status = 'proposed' "
+                "WHERE id = ? AND status = 'escrowed' AND chain_intent_id IS NULL",
+                (intent_id,),
+            )
+
     def set_chain_intent(self, intent_id: str, chain_intent_id: int) -> None:
         self.conn.execute(
             "UPDATE intents SET chain_intent_id = ? WHERE id = ?",

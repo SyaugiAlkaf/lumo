@@ -11,6 +11,7 @@ from lumo.monitor import metrics
 DASHBOARD = Path(__file__).parent / "index.html"
 LANDING = Path(__file__).parent.parent.parent / "site" / "index.html"
 TESTNET = Path(__file__).parent / "testnet.html"
+MAX_BODY = 1 << 20  # 1 MiB cap on request bodies
 BG_JS = Path(__file__).parent / "lumo-bg.js"
 MARK = Path(__file__).parent / "lumo-mark.png"
 
@@ -160,18 +161,23 @@ class StateHandler(BaseHTTPRequestHandler):
                 self._json(read_testnet_info(self.db_path, self._config()))
             else:
                 self._reply(404, "text/plain", b"not found")
-        except sqlite3.Error as exc:
-            self._reply(500, "application/json", json.dumps({"error": str(exc)}).encode())
+        except sqlite3.Error:
+            self._reply(500, "application/json", json.dumps({"error": "internal error"}).encode())
 
     def do_POST(self):
         if self.path != "/testnet/run":
             return self._reply(404, "text/plain", b"not found")
-        length = int(self.headers.get("Content-Length", 0))
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except (TypeError, ValueError):
+            return self._error(400, "invalid Content-Length")
+        if length < 0 or length > MAX_BODY:
+            return self._error(400, "request too large")
         raw = self.rfile.read(length)
         try:
             body = json.loads(raw) if raw else {}
-        except json.JSONDecodeError as exc:
-            return self._error(400, str(exc))
+        except json.JSONDecodeError:
+            return self._error(400, "invalid JSON")
         invoice_text = body.get("invoice_text") if isinstance(body, dict) else None
         if not isinstance(invoice_text, str) or not invoice_text.strip():
             return self._error(400, "invoice_text (string) is required")
@@ -181,10 +187,11 @@ class StateHandler(BaseHTTPRequestHandler):
                     invoice_text, self._config(), adapter=type(self).chain_adapter
                 )
             )
-        except ChainError as exc:
-            self._error(502, str(exc))
-        except Exception as exc:
-            self._error(500, str(exc))
+        except ChainError:
+            self._error(502, "chain error")
+        except Exception:
+            # Never leak internal exception detail to an unauthenticated caller.
+            self._error(500, "internal error")
 
     def _error(self, code: int, message: str):
         self._reply(code, "application/json", json.dumps({"error": message}).encode())

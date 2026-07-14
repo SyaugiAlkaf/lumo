@@ -42,8 +42,10 @@ fn setup() -> Fixture {
     let owner = keypair();
     let account = env.register(PolicyAccount, (pk(&env, &owner), CAP));
     let supplier = Address::generate(&env);
-    PolicyAccountClient::new(&env, &account).add_supplier(&supplier);
     let escrow = Address::generate(&env);
+    let client = PolicyAccountClient::new(&env, &account);
+    client.add_supplier(&supplier);
+    client.set_escrow(&escrow);
     Fixture {
         env,
         owner,
@@ -124,20 +126,39 @@ fn t4_bad_sig_rejected() {
     assert_eq!(res.err().unwrap().unwrap(), Error::BadSignature);
 }
 
+// Money-safety invariant: the account authorizes a token transfer ONLY when the
+// recipient is the configured escrow (the sme -> escrow funding leg). A transfer
+// to any other address — an attacker, a fake escrow — is denied even with a
+// valid owner signature, so a compromised agent cannot move funds off-policy.
 #[test]
-fn t4_create_contract_denied() {
+fn t4_transfer_only_to_configured_escrow() {
     let f = setup();
-    let transfer = Context::Contract(ContractContext {
+
+    // Funding the configured escrow, within cap, is allowed.
+    let fund = Context::Contract(ContractContext {
+        contract: Address::generate(&f.env), // token contract
+        fn_name: Symbol::new(&f.env, "transfer"),
+        args: (Address::generate(&f.env), f.escrow.clone(), CAP).into_val(&f.env),
+    });
+    check(&f, vec![&f.env, fund]).unwrap();
+
+    // A transfer to any other recipient is denied — the core invariant.
+    let steal = Context::Contract(ContractContext {
         contract: Address::generate(&f.env),
         fn_name: Symbol::new(&f.env, "transfer"),
-        args: (Address::generate(&f.env), Address::generate(&f.env), CAP).into_val(&f.env),
+        args: (Address::generate(&f.env), Address::generate(&f.env), AMOUNT).into_val(&f.env),
     });
+    assert_eq!(
+        check(&f, vec![&f.env, steal]),
+        Err(Error::RecipientNotAllowed)
+    );
+
+    // Over-cap, even to the escrow, is denied.
     let over = Context::Contract(ContractContext {
         contract: Address::generate(&f.env),
         fn_name: Symbol::new(&f.env, "transfer"),
-        args: (Address::generate(&f.env), Address::generate(&f.env), CAP + 1).into_val(&f.env),
+        args: (Address::generate(&f.env), f.escrow.clone(), CAP + 1).into_val(&f.env),
     });
-    check(&f, vec![&f.env, transfer]).unwrap();
     assert_eq!(check(&f, vec![&f.env, over]), Err(Error::OverCap));
 }
 

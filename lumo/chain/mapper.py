@@ -24,7 +24,17 @@ def sync_status(repo: Repo, client: ChainAdapter, intent_id: str) -> str:
     if mapped == row["status"]:
         return mapped
 
-    if mapped == "released":
+    if mapped == "escrowed":
+        # Crash recovery: the chain shows Funded but the local row never advanced
+        # (e.g. execute() died between submit and record_decision). Persist the
+        # escrowed transition against the existing chain intent — never re-create.
+        repo.record_decision(
+            decision="approved",
+            codes=["CHAIN_FUNDED"],
+            request_hash=row["request_hash"],
+            intent_id=intent_id,
+        )
+    elif mapped == "released":
         repo.mark_released(intent_id)
     elif mapped == "reverted":
         repo.record_decision(

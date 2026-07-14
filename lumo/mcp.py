@@ -61,14 +61,23 @@ TOOLS = [
 ]
 
 
+def _str_arg(arguments: dict, key: str) -> str:
+    value = arguments.get(key)
+    if not isinstance(value, str):
+        raise ValueError(f"{key} must be a string")
+    return value
+
+
 def _call_tool(name: str, arguments: dict, client: LumoClient) -> dict | None:
     if name == "lumo.propose_payment":
-        return client.propose(arguments["invoice_text"]).model_dump()
+        return client.propose(_str_arg(arguments, "invoice_text")).model_dump()
     if name == "lumo.get_status":
-        return client.status(arguments["intent_id"])
+        return client.status(_str_arg(arguments, "intent_id"))
     if name == "lumo.attest":
-        client.attest(arguments["intent_id"], arguments["kind"])
-        return {"intent_id": arguments["intent_id"], "attested": arguments["kind"]}
+        intent_id = _str_arg(arguments, "intent_id")
+        kind = _str_arg(arguments, "kind")
+        client.attest(intent_id, kind)
+        return {"intent_id": intent_id, "attested": kind}
     return None
 
 
@@ -99,9 +108,16 @@ def handle(request: dict, client: LumoClient) -> dict | None:
         name = params.get("name")
         if name not in {tool["name"] for tool in TOOLS}:
             return error(-32602, f"unknown tool {name!r}")
+        arguments = params.get("arguments", {})
+        if not isinstance(arguments, dict):
+            return reply(
+                {"content": [{"type": "text", "text": "arguments must be an object"}], "isError": True}
+            )
         try:
-            result = _call_tool(name, params.get("arguments", {}), client)
-        except (KeyError, ValueError) as exc:
+            result = _call_tool(name, arguments, client)
+        except Exception as exc:
+            # A bad argument or a provider/transport error must degrade to a tool
+            # error, never crash the persistent stdio loop.
             return reply(
                 {"content": [{"type": "text", "text": str(exc)}], "isError": True}
             )
@@ -124,7 +140,11 @@ def main() -> int:
         line = line.strip()
         if not line:
             continue
-        response = handle(json.loads(line), client)
+        try:
+            request = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        response = handle(request, client)
         if response is not None:
             sys.stdout.write(json.dumps(response) + "\n")
             sys.stdout.flush()

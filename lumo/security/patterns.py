@@ -1,27 +1,32 @@
 import re
 
+# Separator tolerant of punctuation/underscores an attacker can splice between
+# keywords (commas, hyphens, newlines, ...) in addition to plain whitespace.
+_SEP = r"[\W_]+"
+_SEP0 = r"[\W_]*"
+
 PATTERNS = (
     (
         "OVERRIDE_PHRASE",
         re.compile(
-            r"(ignore|disregard|forget)\s+(all\s+)?(previous|prior|above|earlier)"
-            r"\s+(instructions|rules|prompts|policies)",
+            rf"(ignore|disregard|forget){_SEP}(all{_SEP})?(previous|prior|above|earlier)"
+            rf"{_SEP}(instructions|rules|prompts|policies)",
             re.IGNORECASE,
         ),
     ),
     (
         "SYSTEM_OVERRIDE",
         re.compile(
-            r"new\s+(system\s+)?(instructions|policy)\s*:"
-            r"|you\s+are\s+now\s"
-            r"|system\s+prompt",
+            rf"new{_SEP}(system{_SEP})?(instructions|policy){_SEP0}:"
+            rf"|you{_SEP}are{_SEP}now{_SEP}"
+            rf"|system{_SEP}prompt",
             re.IGNORECASE,
         ),
     ),
     (
         "ROLE_TAG",
         re.compile(
-            r"</?\s*(system|assistant|tool)\s*>"
+            rf"</?{_SEP0}(system|assistant|tool){_SEP0}>"
             r"|\[/?(SYSTEM|INST)\]"
             r"|<\|im_(start|end)\|>",
             re.IGNORECASE,
@@ -30,10 +35,10 @@ PATTERNS = (
     (
         "ADDRESS_CHANGE",
         re.compile(
-            r"(payment|bank|wallet|beneficiary)\s+(address|account|details)\s+"
-            r"(has\s+|have\s+)?(been\s+)?(changed|updated)"
-            r"|send\s+(the\s+)?(payment|funds|money)\s+to\s+(this\s+|the\s+)?new\s+address"
-            r"|do\s+not\s+(use|pay)\s+the\s+(usual|registered|old|previous)",
+            rf"(payment|bank|wallet|beneficiary){_SEP}(address|account|details){_SEP}"
+            rf"(has{_SEP}|have{_SEP})?(been{_SEP})?(changed|updated)"
+            rf"|send{_SEP}(the{_SEP})?(payment|funds|money){_SEP}to{_SEP}(this{_SEP}|the{_SEP})?new{_SEP}address"
+            rf"|do{_SEP}not{_SEP}(use|pay){_SEP}the{_SEP}(usual|registered|old|previous)",
             re.IGNORECASE,
         ),
     ),
@@ -45,4 +50,4 @@ ZERO_WIDTH = (
     "\ufeff\u00ad"
 )
 
-STELLAR_ADDRESS = re.compile(r"G[A-Z2-7]{55}")
+STELLAR_ADDRESS = re.compile(r"G[A-Z2-7]{55}", re.IGNORECASE)

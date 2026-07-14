@@ -67,6 +67,18 @@ class Config:
     api_host: str = "127.0.0.1"
     api_port: int = 8788
 
+    def __post_init__(self):
+        # Fail fast on a bad config (env/TOML splat) rather than surfacing it as
+        # an obscure error deep in the chain/pipeline later.
+        if self.chain_adapter not in ("soroban", "mock", "evm"):
+            raise ValueError(
+                f"unknown chain_adapter {self.chain_adapter!r}, expected soroban|mock|evm"
+            )
+        if not (1 <= int(self.api_port) <= 65535):
+            raise ValueError(f"api_port {self.api_port} out of range (1-65535)")
+        if int(self.k_of_n) < 1:
+            raise ValueError(f"k_of_n must be >= 1, got {self.k_of_n}")
+
     @classmethod
     def profile(cls, name: str, **overrides) -> "Config":
         if name not in PROFILES:

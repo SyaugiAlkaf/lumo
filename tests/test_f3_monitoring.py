@@ -158,20 +158,20 @@ def test_render_prometheus_valid_text(conn, repo, config):
 
 def test_webhook_retries_then_delivers():
     sink = MockSink(fail_times=2)
-    dispatcher = WebhookDispatcher(["http://hooks.example.com/lumo"], sink)
+    dispatcher = WebhookDispatcher(["http://8.8.8.8/lumo"], sink)
     dispatcher(Event(name="intent.proposed", payload={"intent_id": "01J"}))
 
     assert sink.attempts == 3
     assert len(sink.deliveries) == 1
     url, body = sink.deliveries[0]
-    assert url == "http://hooks.example.com/lumo"
+    assert url == "http://8.8.8.8/lumo"
     assert body["name"] == "intent.proposed"
     assert body["payload"]["intent_id"] == "01J"
 
 
 def test_webhook_gives_up_after_retries():
     sink = MockSink(fail_times=10)
-    dispatcher = WebhookDispatcher(["http://hooks.example.com/lumo"], sink)
+    dispatcher = WebhookDispatcher(["http://8.8.8.8/lumo"], sink)
     dispatcher(Event(name="intent.refused", payload={}))
     assert sink.deliveries == []
 
@@ -180,15 +180,15 @@ def test_build_webhooks_config_driven():
     assert build_webhooks(Config()) is None
     sink = MockSink()
     dispatcher = build_webhooks(
-        Config(webhook_urls="http://a.example.com/h, http://b.example.com/h"), sink=sink
+        Config(webhook_urls="http://8.8.8.8/a, http://8.8.4.4/b"), sink=sink
     )
-    assert dispatcher.urls == ["http://a.example.com/h", "http://b.example.com/h"]
+    assert dispatcher.urls == ["http://8.8.8.8/a", "http://8.8.4.4/b"]
 
 
 def test_webhook_fires_on_pipeline_event(repo, config):
     sink = MockSink()
     repo.bus.subscribe(
-        build_webhooks(Config(webhook_urls="http://hooks.example.com/lumo"), sink=sink)
+        build_webhooks(Config(webhook_urls="http://8.8.8.8/lumo"), sink=sink)
     )
     pipeline.run(load_invoice("clean_in_policy.txt"), repo, MockProvider(), config)
 

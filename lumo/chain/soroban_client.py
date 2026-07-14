@@ -31,14 +31,6 @@ def encode_i128(amount: int) -> str:
     return str(amount)
 
 
-def encode_arg(value) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, int):
-        return str(value)
-    return str(value)
-
-
 def build_invoke_cmd(
     contract_id: str,
     source: str,
@@ -103,8 +95,11 @@ class SorobanClient:
             )
         out = proc.stdout.strip()
         value = json.loads(out) if out else None
-        match = TX_HASH.search(proc.stderr)
-        return InvokeResult(value=value, tx_hash=match.group(1) if match else None)
+        # Take the LAST 64-hex token in stderr: the stellar CLI prints the tx
+        # hash after any contract/wasm hashes, so the last match is the tx hash
+        # (identical to the old first-match behavior when only one is present).
+        matches = TX_HASH.findall(proc.stderr)
+        return InvokeResult(value=value, tx_hash=matches[-1] if matches else None)
 
     def create_intent(
         self,

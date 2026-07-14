@@ -2,6 +2,12 @@
 .gitignore
 .venv
 .lumo_local
+.env
+*.pem
+*.key
+*.p12
+*credentials*.json
+service-account*.json
 *.egg-info
 __pycache__
 **/__pycache__

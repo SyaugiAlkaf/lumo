@@ -1,4 +1,5 @@
 import hashlib
+import re
 import sqlite3
 import time
 from dataclasses import dataclass, field
@@ -28,6 +29,9 @@ ATTESTATION_MISSING = "ATTESTATION_MISSING"
 KOFN_UNMET = "KOFN_UNMET"
 COSIGN_REQUIRED = "COSIGN_REQUIRED"
 POC_RECEIPT_INVALID = "POC_RECEIPT_INVALID"
+AMOUNT_MISMATCH = "AMOUNT_MISMATCH"
+
+_AMOUNT_TOKEN_RE = re.compile(r"[0-9][0-9,]*(?:\.[0-9]+)?")
 
 
 class GuardRefused(Exception):
@@ -57,6 +61,7 @@ class GuardContext:
     cosign_token: str | None = None
     compute_receipt: dict | None = None
     intent: sqlite3.Row | None = None
+    invoice_text: str = ""
 
 
 class Guard:
@@ -73,6 +78,30 @@ class InjectionGuard(Guard):
                 "refuse", [engine.INJECTION_SUSPECTED], "injection heuristics flagged invoice"
             )
         return PASS
+
+
+def _amount_matches_text(amount_stroops: int, text: str) -> bool:
+    target = Decimal(amount_stroops) / STROOP
+    for token in _AMOUNT_TOKEN_RE.findall(text):
+        try:
+            value = Decimal(token.replace(",", ""))
+        except InvalidOperation:
+            continue
+        if value == target:
+            return True
+    return False
+
+
+class AmountCrossCheckGuard(Guard):
+    def check(self, ctx: GuardContext) -> GuardResult:
+        amount = ctx.request.amount_stroops
+        if amount is None:
+            return PASS
+        if _amount_matches_text(amount, ctx.invoice_text):
+            return PASS
+        return GuardResult(
+            "refuse", [AMOUNT_MISMATCH], "extracted amount not found in raw invoice text"
+        )
 
 
 class PolicyEngineGuard(Guard):
@@ -204,12 +233,15 @@ def to_stroops(amount: str | None) -> int | None:
     if amount is None:
         return None
     try:
-        stroops = Decimal(amount) * STROOP
-    except InvalidOperation:
+        value = Decimal(amount)
+        if not value.is_finite():
+            return None
+        stroops = value * STROOP
+        if stroops != stroops.to_integral_value():
+            return None
+        return int(stroops)
+    except (InvalidOperation, OverflowError, ArithmeticError):
         return None
-    if stroops != stroops.to_integral_value():
-        return None
-    return int(stroops)
 
 
 def run(
@@ -268,8 +300,10 @@ def run(
         supplier_addresses=frozenset(repo.supplier_addresses()),
         cosign_token=cosign_token,
         compute_receipt=compute_receipt,
+        invoice_text=scan.normalized_text,
     )
-    verdict, codes = run_guards(build_guards(config), ctx)
+    guards = build_guards(config) + [AmountCrossCheckGuard(config.policy_engine)]
+    verdict, codes = run_guards(guards, ctx)
 
     if verdict == "refuse":
         repo.record_decision(
