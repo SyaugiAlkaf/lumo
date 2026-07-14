@@ -31,10 +31,11 @@ button{font-family:inherit}
 <lumo-bg style="position:fixed;inset:0;z-index:0;display:block;pointer-events:none;overflow:hidden" opacity="0.4" density="0.46" speed="0.32" scale="6" tint="1" glow="1.1"></lumo-bg>
 <div style="--accent:#2E7BFF;--accent-deep:#1C5BD6;--gold:#F5C15A;--gold-deep:#D8942A;--danger:#D0433C;--danger-deep:#B4322C;--ink:#12141C;--muted:#565B69;--faint:#8A8F9C;--line:rgba(18,20,28,.10);--surface:#ffffff;--bg:#F4F1EA;position:relative;z-index:1;min-height:100vh;background:transparent;color:var(--ink);font-family:'Hanken Grotesk',sans-serif;padding:24px 22px 28px">
 <div style="max-width:1080px;margin:0 auto">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="lumograd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E7BFF"/><stop offset=".55" stop-color="#1C5BD6"/><stop offset="1" stop-color="#163E8C"/></linearGradient></defs></svg>
 
   <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:30px">
     <div style="display:flex;align-items:center;gap:13px">
-      <img src="/lumo-mark.png" alt="Lumo" width="40" height="40" style="width:40px;height:40px;filter:drop-shadow(0 6px 14px rgba(18,20,28,.16)) drop-shadow(0 0 22px rgba(245,193,90,.5))">
+      <div style="width:40px;height:40px;filter:drop-shadow(0 6px 14px rgba(18,20,28,.16)) drop-shadow(0 0 22px rgba(245,193,90,.5))"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="url(#lumograd)" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" style="display:block" aria-label="Lumo"><circle cx="12" cy="12" r="10"/><path d="m14.31 8 5.74 9.94"/><path d="M9.69 8h11.48"/><path d="m7.38 12 5.74-9.94"/><path d="M9.69 16 3.95 6.06"/><path d="M14.31 16H2.83"/><path d="m16.62 12-5.74 9.94"/><circle cx="12" cy="12" r="2.5" fill="#F5C15A" stroke="none"/></svg></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <a href="/" style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:600;letter-spacing:.12em;padding-left:.12em;line-height:1;color:var(--ink)">LUM<span style="color:var(--gold-deep)">O</span></a>
         <span style="font-size:12.5px;color:var(--faint);letter-spacing:.01em">· testnet test tool</span>
@@ -257,7 +258,7 @@ button{font-family:inherit}
   function showIdle() {
     $("panel").innerHTML =
       '<div style="flex:1;min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:17px;border:1px dashed color-mix(in srgb,var(--ink) 15%, transparent);border-radius:15px;padding:32px">' +
-      '<img src="/lumo-mark.png" alt="" width="54" height="54" style="width:54px;height:54px;opacity:.42">' +
+      '<svg viewBox="0 0 24 24" width="54" height="54" fill="none" stroke="url(#lumograd)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;opacity:.5"><circle cx="12" cy="12" r="10"/><path d="m14.31 8 5.74 9.94"/><path d="M9.69 8h11.48"/><path d="m7.38 12 5.74-9.94"/><path d="M9.69 16 3.95 6.06"/><path d="M14.31 16H2.83"/><path d="m16.62 12-5.74 9.94"/><circle cx="12" cy="12" r="2.4" fill="#F5C15A" stroke="none"/></svg>' +
       '<div><div style="font-size:15px;font-weight:600;margin-bottom:6px">Nothing has run yet</div>' +
       '<div style="font-size:13px;color:var(--faint);max-width:290px;line-height:1.55">Pick an invoice — or edit it — then run it on Stellar testnet to see what the contracts allow.</div></div></div>';
   }
