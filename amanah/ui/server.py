@@ -10,6 +10,8 @@ from amanah.monitor import metrics
 
 INDEX = Path(__file__).parent / "index.html"
 TESTNET = Path(__file__).parent / "testnet.html"
+BG_JS = Path(__file__).parent / "lumo-bg.js"
+MARK = Path(__file__).parent / "lumo-mark-mono.png"
 
 TRUST_FLAGS = (
     "injection_scan",
@@ -147,6 +149,10 @@ class StateHandler(BaseHTTPRequestHandler):
                 self._reply(200, "text/html; charset=utf-8", INDEX.read_bytes())
             elif self.path == "/testnet":
                 self._reply(200, "text/html; charset=utf-8", TESTNET.read_bytes())
+            elif self.path == "/lumo-bg.js":
+                self._reply(200, "application/javascript; charset=utf-8", BG_JS.read_bytes())
+            elif self.path == "/lumo-mark-mono.png":
+                self._reply(200, "image/png", MARK.read_bytes())
             elif self.path == "/testnet/info":
                 self._json(read_testnet_info(self.db_path, self._config()))
             else:
