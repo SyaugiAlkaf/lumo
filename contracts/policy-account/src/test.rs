@@ -168,8 +168,8 @@ fn guard_create_intent_arg_order() {
     env.mock_all_auths();
 
     let admin = Address::generate(&env);
-    let escrow = env.register(amanah_escrow::AmanahEscrow, (admin.clone(),));
-    let escrow_client = amanah_escrow::AmanahEscrowClient::new(&env, &escrow);
+    let escrow = env.register(lumo_escrow::LumoEscrow, (admin.clone(),));
+    let escrow_client = lumo_escrow::LumoEscrowClient::new(&env, &escrow);
     escrow_client.add_oracle(&admin);
 
     let sac = env.register_stellar_asset_contract_v2(Address::generate(&env));

@@ -9,11 +9,11 @@ from pathlib import Path
 import httpx
 import pytest
 
-from amanah import AmanahClient, Decision
-from amanah import mcp
-from amanah.api import ApiHandler
-from amanah.config import Config
-from amanah.monitor.webhooks import MockSink
+from lumo import LumoClient, Decision
+from lumo import mcp
+from lumo.api import ApiHandler
+from lumo.config import Config
+from lumo.monitor.webhooks import MockSink
 
 from conftest import FIXTURES, load_invoice
 
@@ -23,7 +23,7 @@ ORACLE = "GORACLEA" + "A" * 48
 
 @pytest.fixture
 def sdk(db_path):
-    client = AmanahClient(Config(db_path=str(db_path), oracle_address=ORACLE))
+    client = LumoClient(Config(db_path=str(db_path), oracle_address=ORACLE))
     yield client
     client.close()
 
@@ -124,7 +124,7 @@ def test_sdk_metrics(sdk):
 
 
 def test_sdk_monitoring_toggle_off(db_path):
-    client = AmanahClient(Config(db_path=str(db_path), monitoring=False))
+    client = LumoClient(Config(db_path=str(db_path), monitoring=False))
     seen = []
     client.on_event(lambda e: seen.append(e))
     client.propose(load_invoice("clean_in_policy.txt"))
@@ -225,13 +225,13 @@ def test_api_openapi_doc(api):
 
 def test_api_webhook_register_and_fires(api):
     client, sink, _ = api
-    res = client.post("/v1/webhooks", json={"url": "http://hooks.example.com/amanah"})
+    res = client.post("/v1/webhooks", json={"url": "http://hooks.example.com/lumo"})
     assert res.status_code == 200
-    assert res.json() == {"urls": ["http://hooks.example.com/amanah"]}
+    assert res.json() == {"urls": ["http://hooks.example.com/lumo"]}
 
     client.post("/v1/intents", json={"invoice": load_invoice("clean_in_policy.txt")})
     assert any(
-        url == "http://hooks.example.com/amanah" and body["name"] == "intent.proposed"
+        url == "http://hooks.example.com/lumo" and body["name"] == "intent.proposed"
         for url, body in sink.deliveries
     )
 
@@ -243,7 +243,7 @@ def test_api_webhook_missing_url_400(api):
 
 def test_mcp_tool_schemas():
     names = [t["name"] for t in mcp.TOOLS]
-    assert names == ["amanah.propose_payment", "amanah.get_status", "amanah.attest"]
+    assert names == ["lumo.propose_payment", "lumo.get_status", "lumo.attest"]
     for tool in mcp.TOOLS:
         assert tool["description"]
         schema = tool["inputSchema"]
@@ -253,9 +253,9 @@ def test_mcp_tool_schemas():
             assert prop["type"] == "string"
 
     by_name = {t["name"]: t for t in mcp.TOOLS}
-    assert by_name["amanah.propose_payment"]["inputSchema"]["required"] == ["invoice_text"]
-    assert by_name["amanah.get_status"]["inputSchema"]["required"] == ["intent_id"]
-    attest = by_name["amanah.attest"]["inputSchema"]
+    assert by_name["lumo.propose_payment"]["inputSchema"]["required"] == ["invoice_text"]
+    assert by_name["lumo.get_status"]["inputSchema"]["required"] == ["intent_id"]
+    attest = by_name["lumo.attest"]["inputSchema"]
     assert set(attest["required"]) == {"intent_id", "kind"}
     assert attest["properties"]["kind"]["enum"] == ["Shipped", "Failed"]
 
@@ -264,7 +264,7 @@ def test_mcp_initialize_and_list(sdk):
     init = mcp.handle(rpc("initialize"), sdk)
     assert init["id"] == 1
     assert init["result"]["protocolVersion"]
-    assert init["result"]["serverInfo"]["name"] == "amanah"
+    assert init["result"]["serverInfo"]["name"] == "lumo"
     assert "tools" in init["result"]["capabilities"]
 
     listed = mcp.handle(rpc("tools/list", id=2), sdk)
@@ -273,42 +273,42 @@ def test_mcp_initialize_and_list(sdk):
 
 def test_mcp_call_propose_then_status(sdk):
     decision = tool_text(
-        tool_call(sdk, "amanah.propose_payment", {"invoice_text": load_invoice("clean_in_policy.txt")})
+        tool_call(sdk, "lumo.propose_payment", {"invoice_text": load_invoice("clean_in_policy.txt")})
     )
     assert decision["decision"] == "proposed"
     assert sdk.repo.intent(decision["intent_id"]) is not None
 
     status = tool_text(
-        tool_call(sdk, "amanah.get_status", {"intent_id": decision["intent_id"]})
+        tool_call(sdk, "lumo.get_status", {"intent_id": decision["intent_id"]})
     )
     assert status["status"] == "proposed"
 
 
 def test_mcp_call_refused_is_valid_decision(sdk):
     decision = tool_text(
-        tool_call(sdk, "amanah.propose_payment", {"invoice_text": load_invoice("over_cap.txt")})
+        tool_call(sdk, "lumo.propose_payment", {"invoice_text": load_invoice("over_cap.txt")})
     )
     assert decision["decision"] == "refused"
 
 
 def test_mcp_call_attest(sdk):
     decision = tool_text(
-        tool_call(sdk, "amanah.propose_payment", {"invoice_text": load_invoice("clean_in_policy.txt")})
+        tool_call(sdk, "lumo.propose_payment", {"invoice_text": load_invoice("clean_in_policy.txt")})
     )
     body = tool_text(
-        tool_call(sdk, "amanah.attest", {"intent_id": decision["intent_id"], "kind": "Shipped"})
+        tool_call(sdk, "lumo.attest", {"intent_id": decision["intent_id"], "kind": "Shipped"})
     )
     assert body == {"intent_id": decision["intent_id"], "attested": "Shipped"}
     assert [r["kind"] for r in sdk.repo.attestations(decision["intent_id"])] == ["Shipped"]
 
 
 def test_mcp_call_unknown_intent_is_error(sdk):
-    response = tool_call(sdk, "amanah.get_status", {"intent_id": "01JNOSUCHINTENT"})
+    response = tool_call(sdk, "lumo.get_status", {"intent_id": "01JNOSUCHINTENT"})
     assert response["result"]["isError"] is True
 
 
 def test_mcp_unknown_tool_error(sdk):
-    response = tool_call(sdk, "amanah.teleport_funds", {})
+    response = tool_call(sdk, "lumo.teleport_funds", {})
     assert response["error"]["code"] == -32602
 
 
@@ -325,9 +325,9 @@ def test_mcp_notification_returns_none(sdk):
 def example_env(tmp_path):
     return {
         **os.environ,
-        "AMANAH_DB": str(tmp_path / "example.db"),
-        "AMANAH_CONFIG": str(tmp_path / "missing.toml"),
-        "AMANAH_PROVIDER": "mock",
+        "LUMO_DB": str(tmp_path / "example.db"),
+        "LUMO_CONFIG": str(tmp_path / "missing.toml"),
+        "LUMO_PROVIDER": "mock",
         "PYTHONPATH": str(ROOT),
     }
 
@@ -343,7 +343,7 @@ def test_example_sdk_runs(tmp_path):
 
 def test_example_rest_api_curl_runs(tmp_path, api):
     client, _, _ = api
-    env = {**example_env(tmp_path), "AMANAH_API": str(client.base_url)}
+    env = {**example_env(tmp_path), "LUMO_API": str(client.base_url)}
     proc = subprocess.run(
         ["bash", "examples/rest_curl.sh"],
         cwd=ROOT, env=env, capture_output=True, text=True,
@@ -358,5 +358,5 @@ def test_example_mcp_runs(tmp_path):
         cwd=ROOT, env=example_env(tmp_path), capture_output=True, text=True,
     )
     assert proc.returncode == 0, proc.stderr
-    assert "amanah.propose_payment" in proc.stdout
+    assert "lumo.propose_payment" in proc.stdout
     assert "proposed" in proc.stdout

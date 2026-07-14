@@ -98,10 +98,10 @@ const BUMP_THRESHOLD: u32 = 30 * DAY_LEDGERS;
 const BUMP_EXTEND: u32 = 90 * DAY_LEDGERS;
 
 #[contract]
-pub struct AmanahEscrow;
+pub struct LumoEscrow;
 
 #[contractimpl]
-impl AmanahEscrow {
+impl LumoEscrow {
     pub fn __constructor(env: Env, admin: Address) {
         env.storage().instance().set(&Key::Admin, &admin);
     }

@@ -5,11 +5,11 @@ from http.server import HTTPServer
 import httpx
 import pytest
 
-from amanah.chain.mock_chain import MockChainAdapter
-from amanah.config import Config
-from amanah.db.seed import SME_ADDRESS, TOKEN_ADDRESS
-from amanah.testtool import EXPLORER_TX, run_invoice
-from amanah.ui.server import StateHandler
+from lumo.chain.mock_chain import MockChainAdapter
+from lumo.config import Config
+from lumo.db.seed import SME_ADDRESS, TOKEN_ADDRESS
+from lumo.testtool import EXPLORER_TX, run_invoice
+from lumo.ui.server import StateHandler
 
 from conftest import load_invoice
 

@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from amanah.config import Config
-from amanah.db import migrate, seed
-from amanah.db.connection import connect
-from amanah.db.repo import Repo
+from lumo.config import Config
+from lumo.db import migrate, seed
+from lumo.db.connection import connect
+from lumo.db.repo import Repo
 
 FIXTURES = Path(__file__).parent / "fixtures" / "invoices"
 
@@ -18,7 +18,7 @@ def load_invoice(name: str) -> str:
 
 @pytest.fixture
 def db_path(tmp_path):
-    return tmp_path / "amanah.db"
+    return tmp_path / "lumo.db"
 
 
 @pytest.fixture

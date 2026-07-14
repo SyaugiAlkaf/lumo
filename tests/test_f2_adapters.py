@@ -1,26 +1,26 @@
 import pytest
 
-from amanah import flow, pipeline
-from amanah.anchor.adapter import (
+from lumo import flow, pipeline
+from lumo.anchor.adapter import (
     AnchorAdapter,
     GCashAnchor,
     MockAnchor,
     PdaxAnchor,
     build_anchor,
 )
-from amanah.chain import ChainError
-from amanah.chain.adapter import (
+from lumo.chain import ChainError
+from lumo.chain.adapter import (
     ChainAdapter,
     EvmAdapter,
     SorobanAdapter,
     build_chain_adapter,
 )
-from amanah.chain.mock_chain import MockChainAdapter
-from amanah.chain.soroban_client import SorobanClient
-from amanah.config import Config
-from amanah.db.seed import SME_ADDRESS, SUPPLIERS, TOKEN_ADDRESS
-from amanah.llm.mock import MockProvider
-from amanah.oracle.adapter import (
+from lumo.chain.mock_chain import MockChainAdapter
+from lumo.chain.soroban_client import SorobanClient
+from lumo.config import Config
+from lumo.db.seed import SME_ADDRESS, SUPPLIERS, TOKEN_ADDRESS
+from lumo.llm.mock import MockProvider
+from lumo.oracle.adapter import (
     AttestationSource,
     LocalSignerSet,
     ShipmentApiOracle,

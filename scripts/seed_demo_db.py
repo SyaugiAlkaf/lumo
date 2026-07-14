@@ -11,14 +11,14 @@ import json
 import time
 from pathlib import Path
 
-from amanah import flow, pipeline
-from amanah.chain.mock_chain import MockChainAdapter
-from amanah.config import Config
-from amanah.db import migrate, seed
-from amanah.db.connection import connect
-from amanah.llm.mock import MockProvider
-from amanah.db.repo import Repo
-from amanah.monitor import metrics
+from lumo import flow, pipeline
+from lumo.chain.mock_chain import MockChainAdapter
+from lumo.config import Config
+from lumo.db import migrate, seed
+from lumo.db.connection import connect
+from lumo.llm.mock import MockProvider
+from lumo.db.repo import Repo
+from lumo.monitor import metrics
 
 FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "invoices"
 
@@ -31,7 +31,7 @@ def invoice(name: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", default="amanah-demo.db")
+    parser.add_argument("--db", default="lumo-demo.db")
     args = parser.parse_args()
 
     config = Config(db_path=args.db, provider="mock", chain_adapter="mock")

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-BASE="${AMANAH_API:-http://127.0.0.1:8788}"
+BASE="${LUMO_API:-http://127.0.0.1:8788}"
 
 decision=$(curl -sS -X POST "$BASE/v1/intents" \
   -H 'Content-Type: application/json' --data @- <<'EOF'

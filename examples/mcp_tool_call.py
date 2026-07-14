@@ -10,7 +10,7 @@ INVOICE = (
 )
 
 server = subprocess.Popen(
-    [sys.executable, "-m", "amanah.mcp"],
+    [sys.executable, "-m", "lumo.mcp"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     text=True,
@@ -30,7 +30,7 @@ print([tool["name"] for tool in rpc(2, "tools/list")["result"]["tools"]])
 call = rpc(
     3,
     "tools/call",
-    {"name": "amanah.propose_payment", "arguments": {"invoice_text": INVOICE}},
+    {"name": "lumo.propose_payment", "arguments": {"invoice_text": INVOICE}},
 )
 print(call["result"]["content"][0]["text"])
 

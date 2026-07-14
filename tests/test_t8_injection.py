@@ -1,9 +1,9 @@
 import pytest
 
-from amanah import pipeline
-from amanah.llm.mock import COMPROMISED, MockProvider
-from amanah.policy import engine
-from amanah.security import injection
+from lumo import pipeline
+from lumo.llm.mock import COMPROMISED, MockProvider
+from lumo.policy import engine
+from lumo.security import injection
 
 from conftest import ATTACKER_ADDRESS, load_invoice
 

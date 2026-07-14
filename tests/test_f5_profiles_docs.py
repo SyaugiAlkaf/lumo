@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from amanah import pipeline
-from amanah.config import Config
-from amanah.llm.mock import MockProvider
+from lumo import pipeline
+from lumo.config import Config
+from lumo.llm.mock import MockProvider
 
 from conftest import load_invoice
 

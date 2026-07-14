@@ -33,7 +33,7 @@ echo "-- seed demo db --"
 "$PY" "$ROOT/scripts/seed_demo_db.py" --db "$DB"
 
 PORT=$("$PY" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1',0)); print(s.getsockname()[1]); s.close()")
-"$PY" -m amanah.ui.server --db "$DB" --port "$PORT" >/dev/null 2>&1 &
+"$PY" -m lumo.ui.server --db "$DB" --port "$PORT" >/dev/null 2>&1 &
 UI_PID=$!
 
 for _ in $(seq 1 50); do

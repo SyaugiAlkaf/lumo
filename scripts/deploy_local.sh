@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Deploy escrow + policy-account + USDC SAC to the local quickstart network.
-# Writes contract IDs as JSON to .amanah_local/deploy.json.
+# Writes contract IDs as JSON to .lumo_local/deploy.json.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-OUT_DIR="$ROOT/.amanah_local"
+OUT_DIR="$ROOT/.lumo_local"
 WASM_DIR="$ROOT/contracts/target/wasm32v1-none/release"
 NETWORK="local"
 PY="$ROOT/.venv/bin/python"
@@ -28,16 +28,16 @@ ensure_key() {
 }
 
 echo "-- identities --"
-ADMIN_ADDR=$(ensure_key amanah-admin)
-ISSUER_ADDR=$(ensure_key amanah-issuer)
-SME_ADDR=$(ensure_key amanah-sme)
+ADMIN_ADDR=$(ensure_key lumo-admin)
+ISSUER_ADDR=$(ensure_key lumo-issuer)
+SME_ADDR=$(ensure_key lumo-sme)
 echo "admin  $ADMIN_ADDR"
 echo "issuer $ISSUER_ADDR"
 
 echo "-- deploy escrow --"
 ESCROW_ID=$(stellar contract deploy \
-    --wasm "$WASM_DIR/amanah_escrow.wasm" \
-    --source-account amanah-admin --network "$NETWORK" \
+    --wasm "$WASM_DIR/lumo_escrow.wasm" \
+    --source-account lumo-admin --network "$NETWORK" \
     -- --admin "$ADMIN_ADDR")
 echo "escrow $ESCROW_ID"
 
@@ -49,15 +49,15 @@ sys.stdout.write(raw[1:33].hex())
 ")
 CAP_PER_TX=20000000000
 POLICY_ID=$(stellar contract deploy \
-    --wasm "$WASM_DIR/amanah_policy_account.wasm" \
-    --source-account amanah-admin --network "$NETWORK" \
+    --wasm "$WASM_DIR/lumo_policy_account.wasm" \
+    --source-account lumo-admin --network "$NETWORK" \
     -- --owner "$SME_PUBKEY_HEX" --cap_per_tx "$CAP_PER_TX")
 echo "policy $POLICY_ID"
 
 echo "-- wrap USDC as SAC --"
 USDC_SAC=$(stellar contract asset deploy \
     --asset "USDC:$ISSUER_ADDR" \
-    --source-account amanah-admin --network "$NETWORK" 2>/dev/null \
+    --source-account lumo-admin --network "$NETWORK" 2>/dev/null \
     || stellar contract id asset --asset "USDC:$ISSUER_ADDR" --network "$NETWORK")
 echo "usdc   $USDC_SAC"
 

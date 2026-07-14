@@ -17,16 +17,16 @@ done
 marker() { printf '  %-4s %-5s %s\n' "$1" "$2" "$3"; }
 
 gate_p0() {
-    echo "== Amanah acceptance :: gate P0 (escrow + red harness) =="
+    echo "== Lumo acceptance :: gate P0 (escrow + red harness) =="
     preflight || { echo "GATE P0: BLOCKED (prefetch)"; exit 3; }
 
     local test_log build_log test_rc build_rc
     test_log="$(mktemp)"
     build_log="$(mktemp)"
 
-    echo "-- cargo test -p amanah-escrow --"
+    echo "-- cargo test -p lumo-escrow --"
     set +e
-    ( cd "$ROOT/contracts" && cargo test -p amanah-escrow --color never ) >"$test_log" 2>&1
+    ( cd "$ROOT/contracts" && cargo test -p lumo-escrow --color never ) >"$test_log" 2>&1
     test_rc=$?
     set -e
     cat "$test_log"
@@ -59,7 +59,7 @@ gate_p0() {
 }
 
 gate_p1() {
-    echo "== Amanah acceptance :: gate P1 (policy-signer + oracle auth) =="
+    echo "== Lumo acceptance :: gate P1 (policy-signer + oracle auth) =="
     preflight || { echo "GATE P1: BLOCKED (prefetch)"; exit 3; }
 
     local test_log build_log test_rc build_rc
@@ -93,7 +93,7 @@ gate_p1() {
 }
 
 gate_p2() {
-    echo "== Amanah acceptance :: gate P2 (on-device agent, MockProvider only) =="
+    echo "== Lumo acceptance :: gate P2 (on-device agent, MockProvider only) =="
     local py="$ROOT/.venv/bin/python"
     [ -x "$py" ] || py="$(command -v python3 || true)"
     [ -n "$py" ] && "$py" -c "import pytest, pydantic, httpx" >/dev/null 2>&1 \
@@ -125,13 +125,13 @@ gate_p2() {
 }
 
 gate_p3() {
-    echo "== Amanah acceptance :: gate P3 (e2e spine + mock anchor) =="
+    echo "== Lumo acceptance :: gate P3 (e2e spine + mock anchor) =="
     "$HERE/t10_e2e.sh" || { echo "GATE P3: FAIL"; exit 1; }
     echo "GATE P3: PASS (T10 green)"
 }
 
 gate_full() {
-    echo "== Amanah acceptance :: FULL (P0-P3, T1-T10 re-run) =="
+    echo "== Lumo acceptance :: FULL (P0-P3, T1-T10 re-run) =="
     gate_p0
     echo
     gate_p1

@@ -1,8 +1,8 @@
 import pytest
 
-from amanah.chain.request_hash import canonical_json, request_hash
-from amanah.db import migrate, ulid
-from amanah.db.connection import connect
+from lumo.chain.request_hash import canonical_json, request_hash
+from lumo.db import migrate, ulid
+from lumo.db.connection import connect
 
 
 def test_connection_enables_wal_and_foreign_keys(db_path):

@@ -3,10 +3,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from amanah import flow, pipeline
-from amanah.config import Config
-from amanah.llm.mock import MockProvider
-from amanah.models import IntentDraft
+from lumo import flow, pipeline
+from lumo.config import Config
+from lumo.llm.mock import MockProvider
+from lumo.models import IntentDraft
 
 from conftest import load_invoice
 
@@ -63,7 +63,7 @@ def escrowed_intent(repo, ref="INV-F1"):
 
 
 def test_config_from_file_then_env_overrides(tmp_path, monkeypatch):
-    toml = tmp_path / "amanah.toml"
+    toml = tmp_path / "lumo.toml"
     toml.write_text(
         "k_of_n = 3\nproof_of_compute = true\nhuman_cosign_threshold = 5\n"
     )
@@ -77,9 +77,9 @@ def test_config_from_file_then_env_overrides(tmp_path, monkeypatch):
     assert cfg.require_attestation is False
     assert cfg.dry_run is False
 
-    monkeypatch.setenv("AMANAH_CONFIG", str(toml))
-    monkeypatch.setenv("AMANAH_K_OF_N", "2")
-    monkeypatch.setenv("AMANAH_DRY_RUN", "true")
+    monkeypatch.setenv("LUMO_CONFIG", str(toml))
+    monkeypatch.setenv("LUMO_K_OF_N", "2")
+    monkeypatch.setenv("LUMO_DRY_RUN", "true")
     cfg = Config.from_env()
     assert cfg.k_of_n == 2
     assert cfg.proof_of_compute is True

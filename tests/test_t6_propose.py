@@ -1,6 +1,6 @@
-from amanah import cli, pipeline
-from amanah.db import seed
-from amanah.llm.mock import MockProvider
+from lumo import cli, pipeline
+from lumo.db import seed
+from lumo.llm.mock import MockProvider
 
 from conftest import FIXTURES, load_invoice
 

@@ -1,5 +1,5 @@
 [package]
-name = "amanah-policy-account"
+name = "lumo-policy-account"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -13,6 +13,6 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
-amanah-escrow = { path = "../escrow" }
+lumo-escrow = { path = "../escrow" }
 ed25519-dalek = "1.0.1"
 rand = "0.7.3"

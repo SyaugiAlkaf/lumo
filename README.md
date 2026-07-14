@@ -8,10 +8,6 @@ enforce. Funds in escrow can structurally reach only the bound supplier (on a
 `Shipped` attestation) or return to the SME (on `Failed`, or on deadline with no
 attestation) — so compromising the agent cannot move money to an attacker.
 
-> The Python package, CLI, and deployed contracts keep the project's original
-> name, `amanah` (e.g. `python -m amanah.cli`, `AmanahClient`, `amanah-escrow`,
-> `AMANAH_*` env vars). Only the product and repository are named Lumo.
-
 **Demo persona:** Bu Sari, owner of Sari Craft Export, a batik exporter in
 Yogyakarta, Indonesia. She pays overseas fabric suppliers in USDC and wants an
 agent that can read an invoice and propose a payment — without ever being able
@@ -23,7 +19,7 @@ to send her money somewhere an attacker chose.
                               invoice.txt
                                    |
                                    v
-+---------------------- Python: amanah/ (on-device) ----------------------+
++---------------------- Python: lumo/ (on-device) ----------------------+
 |  security/injection --> llm/(llama|mock) --> policy/engine              |
 |                    \--------------> pipeline --------/  PROPOSE/REFUSE  |
 |  db/repo.record_decision  <-- single audit chokepoint (T9)              |
@@ -74,7 +70,7 @@ contracts/           Rust workspace (soroban-sdk 26, wasm32v1-none)
   escrow/             conditional-release escrow (T1-T3, T5)
   policy-account/     __check_auth policy-signer smart account (T4)
 bindings/             frozen contract interface (escrow.json, policy_account.json)
-amanah/               the Python agent (one package)
+lumo/               the Python agent (one package)
   llm/                extraction-only providers: mock + llama-server
   security/           injection scanner (NFKC + zero-width strip, patterns)
   policy/             deterministic evaluate() — caps, registry, injection
@@ -90,7 +86,7 @@ scripts/              local_network / deploy_local / demo / deploy_testnet / tes
 
 ## Contracts
 
-### `amanah-escrow`
+### `lumo-escrow`
 
 Conditional-release escrow. One SME funds an `Intent` bound to one supplier; an
 admin-registered oracle attests the outcome; funds settle only along the two
@@ -108,7 +104,7 @@ allowed paths.
 A `Shipped` attestation always beats the deadline: once shipped, `refund` is
 blocked and `release` stays valid.
 
-### `amanah-policy-account`
+### `lumo-policy-account`
 
 Deny-by-default policy-signer smart account (`__check_auth`). Only two
 functions are allowlisted (`transfer`, `create_intent`); every invocation is
@@ -126,14 +122,14 @@ stellar contract build         # -> target/wasm32v1-none/release/*.wasm
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m amanah.cli --db /tmp/amanah.db init
-.venv/bin/python -m amanah.cli propose tests/fixtures/invoices/clean_in_policy.txt
+.venv/bin/python -m lumo.cli --db /tmp/lumo.db init
+.venv/bin/python -m lumo.cli propose tests/fixtures/invoices/clean_in_policy.txt
 ```
 
 `propose` exits `0` and prints a tx plan for an in-policy invoice, or exits `2`
 with refusal codes (`INJECTION_SUSPECTED`, `OVER_TX_CAP`, `UNKNOWN_SUPPLIER`,
-...) and proposes nothing on-chain. `AMANAH_PROVIDER=mock` (default) never
-touches a real model; point `AMANAH_PROVIDER=llama` + `AMANAH_LLAMA_URL` at a
+...) and proposes nothing on-chain. `LUMO_PROVIDER=mock` (default) never
+touches a real model; point `LUMO_PROVIDER=llama` + `LUMO_LLAMA_URL` at a
 local `llama-server` for the real extraction path (`make live-check`).
 
 ## Try it on Stellar testnet (web)
@@ -154,7 +150,7 @@ scripts/testnet_smoke.sh     # POSTs a clean invoice, asserts a real create_inte
 ```
 
 The tester refers to three funded testnet keystore identities
-(`amanah-deployer`, `amanah-sme`, `amanah-supplier`) **by name only** — it never
+(`lumo-deployer`, `lumo-sme`, `lumo-supplier`) **by name only** — it never
 reads, prints, or exports a secret key. Its presets (clean / over-cap /
 injection) are built from the live per-transaction cap and approved supplier
 returned by `/testnet/info`, so a clean invoice settles on-chain and a tampered
@@ -169,9 +165,9 @@ Runnable versions of the snippets live in `examples/`.
 ### Integrate in 5 lines
 
 ```python
-from amanah import AmanahClient
+from lumo import LumoClient
 
-client = AmanahClient()
+client = LumoClient()
 decision = client.propose(open("invoice.txt").read())
 print(decision.decision, decision.codes)
 ```
@@ -181,7 +177,7 @@ exact `create_intent` tx plan and an `intent_id` you can `status()` later.
 
 ### Call from any language
 
-Start the REST API (`python -m amanah.api`, default `127.0.0.1:8788`) and use
+Start the REST API (`python -m lumo.api`, default `127.0.0.1:8788`) and use
 plain HTTP — the full schema is served at `/v1/openapi.json`:
 
 ```bash
@@ -192,8 +188,8 @@ curl -X POST http://127.0.0.1:8788/v1/intents \
 
 ### Use from any AI agent
 
-`python -m amanah.mcp` is an MCP server over stdio exposing three tools:
-`amanah.propose_payment`, `amanah.get_status`, `amanah.attest`. Point any
+`python -m lumo.mcp` is an MCP server over stdio exposing three tools:
+`lumo.propose_payment`, `lumo.get_status`, `lumo.attest`. Point any
 MCP-capable agent at that command and it can propose payments — while every
 cap, registry, and injection guard still decides, not the agent.
 
@@ -232,7 +228,7 @@ safe defaults and any field can be overridden per call:
 | `fast` | injection · policy | propose/refuse only, no release guards |
 
 ```python
-client = AmanahClient(Config.profile("balanced"))
+client = LumoClient(Config.profile("balanced"))
 ```
 
 ## Local demo
@@ -258,14 +254,14 @@ it:
    on-chain, funds locked and structurally bound to that one supplier.
 4. **Attestation + release** — the oracle attests `Shipped`; the escrow
    releases to the supplier and nowhere else.
-5. **MOCK cash-out** — `amanah/anchor/mock_anchor.py` records a
+5. **MOCK cash-out** — `lumo/anchor/mock_anchor.py` records a
    `MOCK-<ulid>` receipt. This is a stand-in for a real SEP-24 anchor
    off-ramp (structurally zero network calls) — never a real payout.
 6. **Failure path** — a second order is left unshipped past its deadline
    (a real few-second wait, no ledger time-travel) and refunds Bu Sari; the
    supplier never touches those funds.
 
-Pace between steps is `AMANAH_DEMO_PACE` seconds (default `2`). The UI stays
+Pace between steps is `LUMO_DEMO_PACE` seconds (default `2`). The UI stays
 up after the walkthrough finishes — `Ctrl+C` to stop it, then
 `scripts/local_network.sh down`.
 
@@ -290,13 +286,13 @@ acceptance/acceptance.sh             # full re-run, T1-T10
 
 Deployed to the **Stellar testnet** (`Test SDF Network ; September 2015`) — a
 valueless public test network. No mainnet asset is referenced and no real funds
-move; the cash-out anchor stays structurally mocked (`amanah/anchor/mock_anchor.py`).
+move; the cash-out anchor stays structurally mocked (`lumo/anchor/mock_anchor.py`).
 
 | Artifact | Value |
 |---|---|
 | Network | `testnet` |
-| `amanah-escrow` | [`CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK`](https://stellar.expert/explorer/testnet/contract/CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK) |
-| `amanah-policy-account` | [`CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS`](https://stellar.expert/explorer/testnet/contract/CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS) |
+| `lumo-escrow` | [`CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK`](https://stellar.expert/explorer/testnet/contract/CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK) |
+| `lumo-policy-account` | [`CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS`](https://stellar.expert/explorer/testnet/contract/CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS) |
 | Escrow admin + oracle | `GBPSOKJDBP5REZBCL6TWAXMU6CEWV5YMU3PMQUSDRGJM6K77TZHGGEEY` |
 | Policy owner (SME ed25519, hex) | `12265b095264b6a939bac5e35e7144fd0c3c8de5d44336e8799e4e0a9edf164b` |
 | Policy per-tx cap | `50000000000` stroops (5,000 test USDC) |

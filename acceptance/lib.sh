@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers for the Amanah acceptance oracle.
+# Shared helpers for the Lumo acceptance oracle.
 
 ESCROW_EXPECTED_PASS=14
 WORKSPACE_EXPECTED_PASS=22
@@ -9,7 +9,7 @@ QUICKSTART_IMAGE="stellar/quickstart:latest"
 QUICKSTART_DIGEST="sha256:8ddf3ed87a5c07eab5202b0fd95f06fb5db3f48cacd7e69fdc0e22925f181168"
 STELLAR_CLI_MAJOR=27
 QUICKSTART_PROTOCOL=26
-QUICKSTART_CONTAINER="amanah-quickstart"
+QUICKSTART_CONTAINER="lumo-quickstart"
 
 preflight() {
     local missing=0

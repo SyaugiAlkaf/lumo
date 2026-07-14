@@ -1,8 +1,8 @@
 import pytest
 
-from amanah.anchor import mock_anchor
-from amanah.chain import mapper
-from amanah.models import IntentDraft
+from lumo.anchor import mock_anchor
+from lumo.chain import mapper
+from lumo.models import IntentDraft
 
 
 class FakeClient:

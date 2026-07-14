@@ -21,7 +21,7 @@ demo:
 	scripts/demo.sh
 
 live-check:
-	@test -n "$$AMANAH_LLAMA_URL" || { echo "set AMANAH_LLAMA_URL to the llama-server base URL"; exit 1; }
+	@test -n "$$LUMO_LLAMA_URL" || { echo "set LUMO_LLAMA_URL to the llama-server base URL"; exit 1; }
 	.venv/bin/python -m pytest tests/test_llm_live.py -q
 
 build:
@@ -29,7 +29,7 @@ build:
 
 spec: build
 	mkdir -p bindings
-	stellar contract info interface --wasm $(WASM_DIR)/amanah_escrow.wasm \
+	stellar contract info interface --wasm $(WASM_DIR)/lumo_escrow.wasm \
 		--output json-formatted > bindings/escrow.json
-	stellar contract info interface --wasm $(WASM_DIR)/amanah_policy_account.wasm \
+	stellar contract info interface --wasm $(WASM_DIR)/lumo_policy_account.wasm \
 		--output json-formatted > bindings/policy_account.json

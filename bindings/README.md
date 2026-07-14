@@ -4,7 +4,7 @@ Frozen cross-facet interface artifacts. Regenerate with `make spec` (rebuilds th
 wasm, then `stellar contract info interface --output json-formatted`). The Python
 chain layer builds tx plans against these — treat the argument order as an ABI.
 
-- `escrow.json` — `AmanahEscrow` SCSpec (`SCSpecEntry` stream).
+- `escrow.json` — `LumoEscrow` SCSpec (`SCSpecEntry` stream).
 - `policy_account.json` — `PolicyAccount` SCSpec.
 
 ## Frozen `create_intent` argument order

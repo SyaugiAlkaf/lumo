@@ -11,7 +11,7 @@ const DEADLINE: u64 = 86_400;
 
 struct Fixture {
     env: Env,
-    client: AmanahEscrowClient<'static>,
+    client: LumoEscrowClient<'static>,
     contract_id: Address,
     token_id: Address,
     token: token::Client<'static>,
@@ -36,8 +36,8 @@ fn setup() -> Fixture {
     let supplier = Address::generate(&env);
     token_minter.mint(&sme, &MINT);
 
-    let contract_id = env.register(AmanahEscrow, (admin,));
-    let client = AmanahEscrowClient::new(&env, &contract_id);
+    let contract_id = env.register(LumoEscrow, (admin,));
+    let client = LumoEscrowClient::new(&env, &contract_id);
     client.add_oracle(&oracle);
 
     Fixture {
@@ -222,8 +222,8 @@ fn t5_removed_oracle_is_rejected() {
 fn t5_non_admin_cannot_add_oracle() {
     let env = Env::default();
     let admin = Address::generate(&env);
-    let contract_id = env.register(AmanahEscrow, (admin,));
-    let client = AmanahEscrowClient::new(&env, &contract_id);
+    let contract_id = env.register(LumoEscrow, (admin,));
+    let client = LumoEscrowClient::new(&env, &contract_id);
     let stranger = Address::generate(&env);
     let oracle = Address::generate(&env);
 

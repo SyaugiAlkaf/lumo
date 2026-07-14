@@ -5,16 +5,16 @@ from http.server import ThreadingHTTPServer
 import httpx
 import pytest
 
-from amanah import flow, pipeline
-from amanah.chain.mock_chain import MockChainAdapter
-from amanah.config import Config
-from amanah.db.repo import Repo
-from amanah.db.seed import SME_ADDRESS, TOKEN_ADDRESS
-from amanah.llm.mock import MockProvider
-from amanah.monitor.events import Event, EventBus
-from amanah.monitor.metrics import COUNTERS, Metrics, render_prometheus, snapshot
-from amanah.monitor.webhooks import MockSink, WebhookDispatcher, build_webhooks
-from amanah.ui.server import StateHandler
+from lumo import flow, pipeline
+from lumo.chain.mock_chain import MockChainAdapter
+from lumo.config import Config
+from lumo.db.repo import Repo
+from lumo.db.seed import SME_ADDRESS, TOKEN_ADDRESS
+from lumo.llm.mock import MockProvider
+from lumo.monitor.events import Event, EventBus
+from lumo.monitor.metrics import COUNTERS, Metrics, render_prometheus, snapshot
+from lumo.monitor.webhooks import MockSink, WebhookDispatcher, build_webhooks
+from lumo.ui.server import StateHandler
 
 from conftest import load_invoice
 
@@ -148,8 +148,8 @@ def test_render_prometheus_valid_text(conn, repo, config):
     pipeline.run(load_invoice("clean_in_policy.txt"), repo, MockProvider(), config)
     text = render_prometheus(snapshot(conn))
 
-    assert "amanah_intents_proposed_total 1" in text
-    assert "amanah_intents_open" in text
+    assert "lumo_intents_proposed_total 1" in text
+    assert "lumo_intents_open" in text
     for line in text.strip().splitlines():
         if line.startswith("# HELP ") or line.startswith("# TYPE "):
             continue
@@ -158,20 +158,20 @@ def test_render_prometheus_valid_text(conn, repo, config):
 
 def test_webhook_retries_then_delivers():
     sink = MockSink(fail_times=2)
-    dispatcher = WebhookDispatcher(["http://hooks.example.com/amanah"], sink)
+    dispatcher = WebhookDispatcher(["http://hooks.example.com/lumo"], sink)
     dispatcher(Event(name="intent.proposed", payload={"intent_id": "01J"}))
 
     assert sink.attempts == 3
     assert len(sink.deliveries) == 1
     url, body = sink.deliveries[0]
-    assert url == "http://hooks.example.com/amanah"
+    assert url == "http://hooks.example.com/lumo"
     assert body["name"] == "intent.proposed"
     assert body["payload"]["intent_id"] == "01J"
 
 
 def test_webhook_gives_up_after_retries():
     sink = MockSink(fail_times=10)
-    dispatcher = WebhookDispatcher(["http://hooks.example.com/amanah"], sink)
+    dispatcher = WebhookDispatcher(["http://hooks.example.com/lumo"], sink)
     dispatcher(Event(name="intent.refused", payload={}))
     assert sink.deliveries == []
 
@@ -188,7 +188,7 @@ def test_build_webhooks_config_driven():
 def test_webhook_fires_on_pipeline_event(repo, config):
     sink = MockSink()
     repo.bus.subscribe(
-        build_webhooks(Config(webhook_urls="http://hooks.example.com/amanah"), sink=sink)
+        build_webhooks(Config(webhook_urls="http://hooks.example.com/lumo"), sink=sink)
     )
     pipeline.run(load_invoice("clean_in_policy.txt"), repo, MockProvider(), config)
 
@@ -213,7 +213,7 @@ def test_metrics_endpoint_prometheus(repo, config, ui_client):
 
     assert res.status_code == 200
     assert res.headers["content-type"].startswith("text/plain")
-    assert "amanah_intents_proposed_total 1" in res.text
+    assert "lumo_intents_proposed_total 1" in res.text
 
 
 def test_api_metrics_json_shape(repo, config, ui_client):

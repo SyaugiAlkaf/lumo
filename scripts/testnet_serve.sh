@@ -9,28 +9,28 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 PY="$ROOT/.venv/bin/python"
-OUT="$ROOT/.amanah_local"
+OUT="$ROOT/.lumo_local"
 DB="$OUT/testnet.db"
-PORT="${AMANAH_TESTNET_PORT:-8790}"
+PORT="${LUMO_TESTNET_PORT:-8790}"
 
-ESCROW_ID="${AMANAH_ESCROW_ID:-CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK}"
-USDC_SAC="${AMANAH_USDC_SAC:-CDWS5VFOIDNU7X3O4CXNF2I5TMGT5RKLB4GDHU24VOO7FRGGI3XYTQC7}"
+ESCROW_ID="${LUMO_ESCROW_ID:-CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK}"
+USDC_SAC="${LUMO_USDC_SAC:-CDWS5VFOIDNU7X3O4CXNF2I5TMGT5RKLB4GDHU24VOO7FRGGI3XYTQC7}"
 
-for key in amanah-deployer amanah-sme amanah-supplier; do
+for key in lumo-deployer lumo-sme lumo-supplier; do
     stellar keys address "$key" >/dev/null 2>&1 \
         || { echo "missing keystore identity: $key (stellar keys generate $key --network testnet --fund)" >&2; exit 1; }
 done
-SME_ADDR=$(stellar keys address amanah-sme)
-SUPPLIER_ADDR=$(stellar keys address amanah-supplier)
-DEPLOYER_ADDR=$(stellar keys address amanah-deployer)
+SME_ADDR=$(stellar keys address lumo-sme)
+SUPPLIER_ADDR=$(stellar keys address lumo-supplier)
+DEPLOYER_ADDR=$(stellar keys address lumo-deployer)
 
 mkdir -p "$OUT"
 rm -f "$DB" "$DB-wal" "$DB-shm"
-AMANAH_DB="$DB" "$PY" -m amanah.cli init >/dev/null
+LUMO_DB="$DB" "$PY" -m lumo.cli init >/dev/null
 
 "$PY" - "$DB" "$SME_ADDR" "$SUPPLIER_ADDR" "$USDC_SAC" <<'EOF'
 import sys
-from amanah.db.connection import connect
+from lumo.db.connection import connect
 
 db, sme, supplier, token = sys.argv[1:5]
 conn = connect(db)
@@ -45,15 +45,15 @@ with conn:
     )
 EOF
 
-export AMANAH_DB="$DB"
-export AMANAH_ESCROW_ID="$ESCROW_ID"
-export AMANAH_NETWORK="testnet"
-export AMANAH_CHAIN_ADAPTER="soroban"
-export AMANAH_SME_SOURCE="amanah-sme"
-export AMANAH_ORACLE_SOURCE="amanah-deployer"
-export AMANAH_ORACLE_ADDRESS="$DEPLOYER_ADDR"
+export LUMO_DB="$DB"
+export LUMO_ESCROW_ID="$ESCROW_ID"
+export LUMO_NETWORK="testnet"
+export LUMO_CHAIN_ADAPTER="soroban"
+export LUMO_SME_SOURCE="lumo-sme"
+export LUMO_ORACLE_SOURCE="lumo-deployer"
+export LUMO_ORACLE_ADDRESS="$DEPLOYER_ADDR"
 
-echo "amanah testnet tool -> http://127.0.0.1:$PORT/testnet"
+echo "lumo testnet tool -> http://127.0.0.1:$PORT/testnet"
 echo "network testnet · escrow $ESCROW_ID"
-echo "signing: sme=amanah-sme oracle=amanah-deployer (keystore identities, testnet-only)"
-exec "$PY" -m amanah.ui.server --db "$DB" --port "$PORT"
+echo "signing: sme=lumo-sme oracle=lumo-deployer (keystore identities, testnet-only)"
+exec "$PY" -m lumo.ui.server --db "$DB" --port "$PORT"

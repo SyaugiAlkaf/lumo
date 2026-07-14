@@ -1,5 +1,5 @@
-from amanah.models import PaymentRequest, PolicyContext, PriorIntent
-from amanah.policy import engine
+from lumo.models import PaymentRequest, PolicyContext, PriorIntent
+from lumo.policy import engine
 
 SUPPLIER = "G" + "B" * 55
 

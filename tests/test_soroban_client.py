@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from amanah.chain import soroban_client
-from amanah.chain.soroban_client import (
+from lumo.chain import soroban_client
+from lumo.chain.soroban_client import (
     CREATE_INTENT_ARG_ORDER,
     InvokeResult,
     SorobanClient,
@@ -46,13 +46,13 @@ def test_create_intent_arg_order_matches_frozen_binding():
 
 def test_build_invoke_cmd_shape():
     cmd = build_invoke_cmd(
-        "CESCROW", "amanah-sme", "local", "attest",
+        "CESCROW", "lumo-sme", "local", "attest",
         [("intent_id", "1"), ("oracle", "GORACLE"), ("kind", '"Shipped"')],
     )
     assert cmd == [
         "stellar", "contract", "invoke",
         "--id", "CESCROW",
-        "--source-account", "amanah-sme",
+        "--source-account", "lumo-sme",
         "--network", "local",
         "--", "attest",
         "--intent_id", "1",
@@ -62,7 +62,7 @@ def test_build_invoke_cmd_shape():
 
 
 def test_create_intent_invocation_matches_known_good_form():
-    client = SorobanClient("CESCROW", network="local", source="amanah-sme")
+    client = SorobanClient("CESCROW", network="local", source="lumo-sme")
     captured = {}
 
     def fake_run(cmd, **kwargs):

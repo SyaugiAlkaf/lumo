@@ -1,6 +1,6 @@
-from amanah import cli, pipeline
-from amanah.llm.mock import MockProvider
-from amanah.policy import engine
+from lumo import cli, pipeline
+from lumo.llm.mock import MockProvider
+from lumo.policy import engine
 
 from conftest import FIXTURES, load_invoice
 

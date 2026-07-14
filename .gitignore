@@ -37,4 +37,6 @@ customers/
 .claude/
 
 # Local demo state (deploy IDs, demo db, generated invoices)
-.amanah_local/
+.lumo_local/
+
+*.egg-info/

@@ -9,7 +9,7 @@ set -euo pipefail
 
 cat <<'EOF'
 ======================================================================
- AMANAH — testnet deploy checklist (human-run, NOT automated)
+ LUMO — testnet deploy checklist (human-run, NOT automated)
 ======================================================================
 
 This script only prints the checklist below, then exits 1. Every
@@ -17,23 +17,23 @@ acceptance gate (P0-P4) and scripts/demo.sh only ever touch the local
 Docker quickstart network — none of them call this file.
 
   1. Generate/verify your own testnet identity:
-       stellar keys generate amanah-deployer --network testnet --fund
-       stellar keys address amanah-deployer
+       stellar keys generate lumo-deployer --network testnet --fund
+       stellar keys address lumo-deployer
 
   2. Build the contracts:
        cd contracts && stellar contract build
 
   3. Deploy the escrow (admin = your testnet identity):
        stellar contract deploy \
-         --wasm contracts/target/wasm32v1-none/release/amanah_escrow.wasm \
-         --source-account amanah-deployer --network testnet \
+         --wasm contracts/target/wasm32v1-none/release/lumo_escrow.wasm \
+         --source-account lumo-deployer --network testnet \
          -- --admin <ADMIN_ADDRESS>
 
   4. Deploy the policy-account (owner = the SME's ed25519 pubkey hex,
      cap_per_tx in stroops):
        stellar contract deploy \
-         --wasm contracts/target/wasm32v1-none/release/amanah_policy_account.wasm \
-         --source-account amanah-deployer --network testnet \
+         --wasm contracts/target/wasm32v1-none/release/lumo_policy_account.wasm \
+         --source-account lumo-deployer --network testnet \
          -- --owner <SME_PUBKEY_HEX> --cap_per_tx <STROOPS>
 
   5. Get a testnet USDC SAC. Use an existing testnet USDC issuer, or your
@@ -42,7 +42,7 @@ Docker quickstart network — none of them call this file.
 
   6. Register at least one oracle on the escrow:
        stellar contract invoke --id <ESCROW_ID> \
-         --source-account amanah-deployer --network testnet \
+         --source-account lumo-deployer --network testnet \
          -- add_oracle --oracle <ORACLE_ADDRESS>
 
   7. Regenerate bindings against the deployed wasm (`make spec`) and diff
@@ -53,7 +53,7 @@ Docker quickstart network — none of them call this file.
 
   9. This stays a LOCAL-network demo (scripts/demo.sh) until a human
      completes steps 1-8. Real anchor/off-ramp integration and mainnet
-     deploy are separate, out-of-scope STOP items — amanah/anchor/mock_anchor.py
+     deploy are separate, out-of-scope STOP items — lumo/anchor/mock_anchor.py
      stays structurally mocked (zero network calls) regardless.
 
 ======================================================================

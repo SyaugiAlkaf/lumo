@@ -8,10 +8,10 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 PY="$ROOT/.venv/bin/python"
-PORT="${AMANAH_TESTNET_PORT:-8790}"
+PORT="${LUMO_TESTNET_PORT:-8790}"
 BASE="http://127.0.0.1:$PORT"
 
-SUPPLIER_ADDR=$(stellar keys address amanah-supplier)
+SUPPLIER_ADDR=$(stellar keys address lumo-supplier)
 REF="INV-SMOKE-$(date +%s)"
 
 INVOICE="INVOICE $REF

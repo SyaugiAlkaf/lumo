@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from amanah.db import seed
-from amanah.models import IntentDraft
+from lumo.db import seed
+from lumo.models import IntentDraft
 
 
 def make_draft(repo, request_hash):
