@@ -310,10 +310,10 @@ move; the cash-out anchor stays structurally mocked (`lumo/anchor/mock_anchor.py
 |---|---|
 | Network | `testnet` |
 | `lumo-escrow` | [`CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK`](https://stellar.expert/explorer/testnet/contract/CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK) |
-| `lumo-policy-account` | [`CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS`](https://stellar.expert/explorer/testnet/contract/CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS) |
+| `lumo-policy-account` | [`CD2EIG3V4TBGHSGLZYCIZRHVFVQFUA3NL2KG7SZFF3SIEGL7MMV4PF5L`](https://stellar.expert/explorer/testnet/contract/CD2EIG3V4TBGHSGLZYCIZRHVFVQFUA3NL2KG7SZFF3SIEGL7MMV4PF5L) |
 | Escrow admin + oracle | `GBPSOKJDBP5REZBCL6TWAXMU6CEWV5YMU3PMQUSDRGJM6K77TZHGGEEY` |
 | Policy owner (SME ed25519, hex) | `12265b095264b6a939bac5e35e7144fd0c3c8de5d44336e8799e4e0a9edf164b` |
-| Policy per-tx cap | `50000000000` stroops (5,000 test USDC) |
+| Policy per-tx cap | `20000000000` stroops (2,000 test USDC) |
 | Test USDC SAC | [`CDWS5VFOIDNU7X3O4CXNF2I5TMGT5RKLB4GDHU24VOO7FRGGI3XYTQC7`](https://stellar.expert/explorer/testnet/contract/CDWS5VFOIDNU7X3O4CXNF2I5TMGT5RKLB4GDHU24VOO7FRGGI3XYTQC7) |
 
 The USDC used here is a **self-issued testnet asset** (`USDC:GC5U5EI2…`), never a
@@ -330,6 +330,16 @@ to the bound supplier only:
 
 The live tester (`scripts/testnet_serve.sh`) produces a fresh trail like this on
 every clean run, and returns an empty transaction list on every refusal.
+
+The policy-account is a custom smart account: its `set_escrow` / `add_supplier`
+config calls are authorized by the SME owner's ed25519 signature through
+`__check_auth`, on-chain — the CLI cannot forge that signature, so the account
+was configured with an owner-signed authorization entry:
+
+| Step | Transaction |
+|---|---|
+| `set_escrow` (bind the one fundable escrow) | [`bca818b7…`](https://stellar.expert/explorer/testnet/tx/bca818b75843b22768acd4dcf0942cea58e2bbe9dcf63c5f5c206236232b13eb) |
+| `add_supplier` (approve the payee) | [`9bd11a5f…`](https://stellar.expert/explorer/testnet/tx/9bd11a5f1ba2a53affcbff11dfde0c4c282c5107e79dd6aa074cd18b158e4b57) |
 
 Re-deploying is a deliberate, human-run action — `scripts/deploy_testnet.sh`
 prints the checklist and exits `1`; no gate, script, or Makefile target

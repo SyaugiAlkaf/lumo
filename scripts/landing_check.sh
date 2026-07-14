@@ -55,7 +55,7 @@ done
 grep -qF 'be tricked.' "$PAGE"; check "honest tagline: the agent can be tricked" $?
 grep -qF 'The money cannot.' "$PAGE"; check "honest tagline: the money cannot" $?
 grep -qF 'CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK' "$PAGE"; check "escrow contract link" $?
-grep -qF 'CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS' "$PAGE"; check "policy-account contract link" $?
+grep -qF 'CD2EIG3V4TBGHSGLZYCIZRHVFVQFUA3NL2KG7SZFF3SIEGL7MMV4PF5L' "$PAGE"; check "policy-account contract link" $?
 grep -qF '0b5d14a535d0fd7ae03b40eccf14205c042d606c4c2c0675ef0ce47265956f4f' "$PAGE"; check "release tx link" $?
 grep -qF 'href="/testnet"' "$PAGE"; check "testnet tester link" $?
 grep -qF 'github.com/SyaugiAlkaf/lumo' "$PAGE"; check "repo link" $?
