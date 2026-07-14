@@ -61,7 +61,7 @@ export AMANAH_DB AMANAH_PROVIDER=mock AMANAH_MOCK_MODE=honest
 
 "$PY" -m amanah.ui.server --db "$AMANAH_DB" --port "$UI_PORT" >/dev/null 2>&1 &
 UI_PID=$!
-echo "UI running at http://127.0.0.1:$UI_PORT — open it now to follow along (MOCK labels are called out there too)"
+echo "UI running: landing http://127.0.0.1:$UI_PORT/ · dashboard http://127.0.0.1:$UI_PORT/dashboard — open the dashboard to follow along (MOCK labels are called out there too)"
 
 step "2/6 — a supplier email arrives asking to redirect payment to a new address"
 INJECT="$ROOT/tests/fixtures/invoices/inject_address_swap.txt"

@@ -42,12 +42,12 @@ for _ in $(seq 1 50); do
 done
 
 echo "-- endpoints --"
-for path in / /api/state /api/metrics; do
+for path in / /dashboard /api/state /api/metrics; do
     CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$PORT$path")
     [ "$CODE" = 200 ]; check "GET $path -> $CODE" $?
 done
 
-HTML=$(curl -s "http://127.0.0.1:$PORT/")
+HTML=$(curl -s "http://127.0.0.1:$PORT/dashboard")
 
 echo "-- hero markers --"
 for marker in injection-banner spine-timeline monitor-panel trust-dial; do

@@ -149,7 +149,7 @@ Two web surfaces ship with the agent:
   invoice with the real policy codes and **zero** transactions.
 
 ```bash
-scripts/testnet_serve.sh     # boots the tester at http://127.0.0.1:8790/testnet
+scripts/testnet_serve.sh     # one origin: / landing · /testnet tester · /dashboard monitor
 scripts/testnet_smoke.sh     # POSTs a clean invoice, asserts a real create_intent tx hash
 ```
 
@@ -216,8 +216,9 @@ Every decision, guard trip, and state change emits an event through one bus
 - **SDK:** `client.on_event(print)` · `client.metrics()`
 - **REST:** `GET /v1/metrics` (counters + gauges), `POST /v1/webhooks`
   registers a URL that receives every event as JSON
-- **Dashboard:** the read-only UI at `http://127.0.0.1:8787` shows the intent
-  timeline and live metrics
+- **Dashboard:** the read-only monitoring UI at
+  `http://127.0.0.1:8787/dashboard` shows the intent timeline and live metrics
+  (the same server serves the landing at `/` and the testnet tester at `/testnet`)
 
 ### Pick a trust tier
 

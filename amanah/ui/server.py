@@ -8,7 +8,8 @@ from amanah.chain import ChainError
 from amanah.config import PROFILES, Config
 from amanah.monitor import metrics
 
-INDEX = Path(__file__).parent / "index.html"
+DASHBOARD = Path(__file__).parent / "index.html"
+LANDING = Path(__file__).parent.parent.parent / "site" / "index.html"
 TESTNET = Path(__file__).parent / "testnet.html"
 BG_JS = Path(__file__).parent / "lumo-bg.js"
 MARK = Path(__file__).parent / "lumo-mark-mono.png"
@@ -146,7 +147,9 @@ class StateHandler(BaseHTTPRequestHandler):
                 body = metrics.render_prometheus(read_metrics(self.db_path)).encode()
                 self._reply(200, "text/plain; version=0.0.4; charset=utf-8", body)
             elif self.path in ("/", "/index.html"):
-                self._reply(200, "text/html; charset=utf-8", INDEX.read_bytes())
+                self._reply(200, "text/html; charset=utf-8", LANDING.read_bytes())
+            elif self.path in ("/dashboard", "/dashboard.html"):
+                self._reply(200, "text/html; charset=utf-8", DASHBOARD.read_bytes())
             elif self.path == "/testnet":
                 self._reply(200, "text/html; charset=utf-8", TESTNET.read_bytes())
             elif self.path == "/lumo-bg.js":
