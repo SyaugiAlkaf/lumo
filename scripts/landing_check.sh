@@ -55,7 +55,7 @@ grep -qF 'CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK' "$PAGE"; che
 grep -qF 'CBY6WBJTUVEOGZVP65AUIUZFKYS5LKMH7MMD2TQX2HZXP67XVW6T7MGS' "$PAGE"; check "policy-account contract link" $?
 grep -qF '0b5d14a535d0fd7ae03b40eccf14205c042d606c4c2c0675ef0ce47265956f4f' "$PAGE"; check "release tx link" $?
 grep -qF 'href="/testnet"' "$PAGE"; check "testnet tester link" $?
-grep -qF 'github.com/SyaugiAlkaf/amanah' "$PAGE"; check "repo link" $?
+grep -qF 'github.com/SyaugiAlkaf/lumo' "$PAGE"; check "repo link" $?
 grep -qE 'S[A-Z0-9]{55}' "$PAGE" && SECRET=1 || SECRET=0; check "no Stellar secret seed on page" "$SECRET"
 
 if [ "$FAIL" = 0 ]; then
