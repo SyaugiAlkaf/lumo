@@ -58,6 +58,19 @@ def test_extracted_amount_matches_despite_comma_and_decimal_formatting(repo, con
     assert pipeline.AMOUNT_MISMATCH not in result.codes
 
 
+def test_currency_formatted_amount_from_llm_is_parsed_not_refused(repo, config):
+    # A real LLM returns a human-formatted amount ("1,250.00 USDC"); the pipeline
+    # must parse it, not wrongly refuse the legitimate payment with INVALID_AMOUNT.
+    text = _invoice_text("1,250.00 USDC")
+    provider = _FixedProvider("1,250.00 USDC")
+
+    result = pipeline.run(text, repo, provider, config)
+
+    assert result.decision == "proposed"
+    assert engine.INVALID_AMOUNT not in result.codes
+    assert pipeline.AMOUNT_MISMATCH not in result.codes
+
+
 def test_infinite_amount_is_clean_refuse_not_a_crash(repo, config):
     text = _invoice_text("100.00 USDC")
     provider = _FixedProvider("Infinity")

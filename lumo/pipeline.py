@@ -32,6 +32,11 @@ POC_RECEIPT_INVALID = "POC_RECEIPT_INVALID"
 AMOUNT_MISMATCH = "AMOUNT_MISMATCH"
 
 _AMOUNT_TOKEN_RE = re.compile(r"[0-9][0-9,]*(?:\.[0-9]+)?")
+# A human-formatted currency amount: a US-grouped number with an optional
+# trailing currency code/symbol ("1,250.00 USDC"). Anchored on both ends so it
+# never salvages scientific notation ("1E9999") or an embedded letter run into a
+# number — those must stay unparseable and fail closed.
+_HUMAN_AMOUNT_RE = re.compile(r"\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*[A-Za-z$€£¥]*\s*")
 
 
 class GuardRefused(Exception):
@@ -234,19 +239,37 @@ def release_check(repo: Repo, config: Config, intent_row: sqlite3.Row) -> None:
         raise GuardRefused(codes)
 
 
+def _normalize_amount(amount: str) -> str | None:
+    # Drop a trailing currency word/symbol and thousands separators a real
+    # extractor tends to include ("1,250.00 USDC" -> "1250.00"). Returns None
+    # unless the whole string is exactly one clean number + optional currency.
+    match = _HUMAN_AMOUNT_RE.fullmatch(amount)
+    return match.group(1).replace(",", "") if match else None
+
+
 def to_stroops(amount: str | None) -> int | None:
     if amount is None:
         return None
-    try:
-        value = Decimal(amount)
+    # Try the raw string first (so "1E9999..." still overflows -> refuse, and a
+    # clean "1250.00" is unchanged), then a currency-stripped fallback for the
+    # human-formatted amounts a real LLM returns.
+    for candidate in (amount, _normalize_amount(amount)):
+        if candidate is None:
+            continue
+        try:
+            value = Decimal(candidate)
+        except (InvalidOperation, ArithmeticError):
+            continue
         if not value.is_finite():
             return None
-        stroops = value * STROOP
-        if stroops != stroops.to_integral_value():
+        try:
+            stroops = value * STROOP
+            if stroops != stroops.to_integral_value():
+                return None
+            return int(stroops)
+        except (InvalidOperation, OverflowError, ArithmeticError):
             return None
-        return int(stroops)
-    except (InvalidOperation, OverflowError, ArithmeticError):
-        return None
+    return None
 
 
 def run(
