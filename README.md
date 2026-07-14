@@ -1,5 +1,9 @@
 # Lumo
 
+<p align="center">
+  <img src="docs/hero.png" alt="Lumo — the agent can be tricked, the money cannot" width="860">
+</p>
+
 **The agent can be tricked. The money cannot.**
 
 On-device SME treasury agent for USDC on Soroban. An untrusted local LLM only
