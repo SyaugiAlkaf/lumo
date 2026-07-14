@@ -19,27 +19,17 @@ to send her money somewhere an attacker chose.
 
 ## Architecture
 
-```
-                              invoice.txt
-                                   |
-                                   v
-+---------------------- Python: lumo/ (on-device) ----------------------+
-|  security/injection --> llm/(llama|mock) --> policy/engine              |
-|                    \--------------> pipeline --------/  PROPOSE/REFUSE  |
-|  db/repo.record_decision  <-- single audit chokepoint (T9)              |
-|  flow.py --> chain/soroban_client (stellar CLI subprocess)              |
-|  chain/mapper.sync_status <-- chain-wins money-state read               |
-|  anchor/mock_anchor.cash_out (MOCK, zero network) --> ui/server + index |
-+-----------------------------------+---------------------------------------+
-                                    |
-                                    v
-+---------------- Soroban (local quickstart / testnet) --------------------+
-|  policy-account: __check_auth allowlist{transfer, create_intent}        |
-|    + per-tx cap + supplier check --> OverCap / SupplierNotApproved      |
-|  escrow: create_intent --> attest(oracle, first-write-wins)             |
-|    --> release(-> supplier ONLY) | refund(-> sme ONLY)                  |
-+---------------------------------------------------------------------------+
-```
+<p align="center">
+  <img src="docs/architecture.png" alt="Lumo architecture: invoice -> on-device AI (reads only) -> policy engine (guard) -> Soroban (guard) -> USDC released; a bad payment is stopped at the policy engine and again on-chain" width="960">
+</p>
+
+The AI reads (untrusted); a deterministic policy decides; Soroban enforces. In
+code that path is `lumo/security` (injection scan) -> `lumo/llm` (mock or llama,
+extraction-only) -> `lumo/policy` (caps, allowlist) -> `lumo/flow` ->
+`lumo/chain/soroban_client` (stellar CLI subprocess), with `lumo/db` as the
+single audit chokepoint and two Soroban contracts as the on-chain gates: the
+policy-signed account (`__check_auth`: per-tx cap + supplier allowlist) and the
+attestation escrow (`create_intent -> attest -> release | refund`).
 
 **Trust boundary:** the LLM is extraction-only and holds zero tools — it reads
 invoice text and returns structured fields, nothing more. Every payment
