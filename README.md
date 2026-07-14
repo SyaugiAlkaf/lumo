@@ -1,10 +1,16 @@
-# Amanah
+# Lumo
+
+**The agent can be tricked. The money cannot.**
 
 On-device SME treasury agent for USDC on Soroban. An untrusted local LLM only
 reads invoices; a deterministic policy layer decides; two on-chain contracts
 enforce. Funds in escrow can structurally reach only the bound supplier (on a
 `Shipped` attestation) or return to the SME (on `Failed`, or on deadline with no
 attestation) — so compromising the agent cannot move money to an attacker.
+
+> The Python package, CLI, and deployed contracts keep the project's original
+> name, `amanah` (e.g. `python -m amanah.cli`, `AmanahClient`, `amanah-escrow`,
+> `AMANAH_*` env vars). Only the product and repository are named Lumo.
 
 **Demo persona:** Bu Sari, owner of Sari Craft Export, a batik exporter in
 Yogyakarta, Indonesia. She pays overseas fabric suppliers in USDC and wants an
@@ -50,6 +56,17 @@ Money truth lives on-chain; agent-brain truth (suppliers, rules, intents,
 audit) lives in SQLite; a `request_hash` (sha256 of the canonical intent JSON)
 binds the two and is checked chain-side before any state is written locally.
 
+## Prior art, honestly
+
+On-chain spend caps and payee allowlists already exist — Coinbase Spend
+Permissions, Crossmint on Soroban, OpenZeppelin's Stellar smart accounts. Lumo
+does not claim to invent them. Its contribution is the combination: an
+**attestation-gated escrow fused with the policy-signed account** (others
+release on a human signature), aimed squarely at the **compromised-agent and
+invoice-fraud / business-email-compromise** threat that agent-payment guidance
+usually leaves to the operator — packaged full-stack with on-device inference
+for the cross-border SME vertical.
+
 ## Repository layout
 
 ```
@@ -64,10 +81,11 @@ amanah/               the Python agent (one package)
   db/                 SQLite schema, migrations, repo (single audit chokepoint)
   chain/              stellar CLI client, request_hash, chain-wins mapper
   anchor/             mock_anchor.py — SEP-24-shaped, zero network
-  ui/                 read-only state viewer (poll /api/state)
+  ui/                 monitoring dashboard + wired testnet tester (/testnet)
+site/                 self-contained public landing page (landing_check.sh gate)
 tests/                pytest: policy engine, injection, audit, db, chain client
 acceptance/           acceptance.sh (gate runner) + t10_e2e.sh (local e2e)
-scripts/              local_network / deploy_local / demo_seed / demo / deploy_testnet
+scripts/              local_network / deploy_local / demo / deploy_testnet / testnet_serve
 ```
 
 ## Contracts
@@ -117,6 +135,31 @@ with refusal codes (`INJECTION_SUSPECTED`, `OVER_TX_CAP`, `UNKNOWN_SUPPLIER`,
 ...) and proposes nothing on-chain. `AMANAH_PROVIDER=mock` (default) never
 touches a real model; point `AMANAH_PROVIDER=llama` + `AMANAH_LLAMA_URL` at a
 local `llama-server` for the real extraction path (`make live-check`).
+
+## Try it on Stellar testnet (web)
+
+Two web surfaces ship with the agent:
+
+- **Landing** — `site/index.html`, a self-contained page (the only external
+  request is Google Fonts). `scripts/landing_check.sh` asserts it stays
+  self-contained, links the live contracts, and leaks no secret key.
+- **Live testnet tester** — a one-page tool that runs a real invoice against
+  the deployed contracts and shows the actual `create_intent → attest →
+  release` transactions on Stellar Expert, or refuses a poisoned / over-cap
+  invoice with the real policy codes and **zero** transactions.
+
+```bash
+scripts/testnet_serve.sh     # boots the tester at http://127.0.0.1:8790/testnet
+scripts/testnet_smoke.sh     # POSTs a clean invoice, asserts a real create_intent tx hash
+```
+
+The tester refers to three funded testnet keystore identities
+(`amanah-deployer`, `amanah-sme`, `amanah-supplier`) **by name only** — it never
+reads, prints, or exports a secret key. Its presets (clean / over-cap /
+injection) are built from the live per-transaction cap and approved supplier
+returned by `/testnet/info`, so a clean invoice settles on-chain and a tampered
+one is refused before anything is signed. Nothing here touches mainnet or real
+funds.
 
 ## Integrate
 
@@ -269,6 +312,9 @@ to the bound supplier only:
 | `create_intent` | [`88b5b770…`](https://stellar.expert/explorer/testnet/tx/88b5b7701d4013893ae063e20fd6f42944d9bac04dd290a3a19d32d09244c4a1) |
 | `attest(Shipped)` | [`e948634a…`](https://stellar.expert/explorer/testnet/tx/e948634a0cf4e6e3fb7cdda1af21fdb0b0a1db742797a3a8d0aa7612f8a03391) |
 | `release` | [`0b5d14a5…`](https://stellar.expert/explorer/testnet/tx/0b5d14a535d0fd7ae03b40eccf14205c042d606c4c2c0675ef0ce47265956f4f) |
+
+The live tester (`scripts/testnet_serve.sh`) produces a fresh trail like this on
+every clean run, and returns an empty transaction list on every refusal.
 
 Re-deploying is a deliberate, human-run action — `scripts/deploy_testnet.sh`
 prints the checklist and exits `1`; no gate, script, or Makefile target
