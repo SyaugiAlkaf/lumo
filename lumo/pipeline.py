@@ -96,7 +96,12 @@ class AmountCrossCheckGuard(Guard):
     def check(self, ctx: GuardContext) -> GuardResult:
         amount = ctx.request.amount_stroops
         if amount is None:
-            return PASS
+            # Unparseable / non-finite amount: refuse here (independent of the
+            # policy engine) so a None amount never reaches tx-plan building and
+            # crashes it.
+            return GuardResult(
+                "refuse", [engine.INVALID_AMOUNT], "amount could not be parsed"
+            )
         if _amount_matches_text(amount, ctx.invoice_text):
             return PASS
         return GuardResult(
@@ -302,7 +307,10 @@ def run(
         compute_receipt=compute_receipt,
         invoice_text=scan.normalized_text,
     )
-    guards = build_guards(config) + [AmountCrossCheckGuard(config.policy_engine)]
+    # The amount integrity check (cross-check vs. the raw text + reject an
+    # unparseable amount) is a deterministic anti-injection guard: it runs
+    # ALWAYS, not only when the policy engine is enabled.
+    guards = build_guards(config) + [AmountCrossCheckGuard(True)]
     verdict, codes = run_guards(guards, ctx)
 
     if verdict == "refuse":

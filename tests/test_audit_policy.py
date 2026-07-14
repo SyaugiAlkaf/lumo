@@ -71,6 +71,26 @@ def test_infinite_amount_is_clean_refuse_not_a_crash(repo, config):
     assert decisions[0]["decision"] == "refused"
 
 
+def test_amount_integrity_enforced_even_with_policy_engine_off(repo, config):
+    from dataclasses import replace
+
+    off = replace(config, policy_engine=False)
+
+    # Unparseable amount -> clean refuse (no crash), independent of the policy engine.
+    r1 = pipeline.run(_invoice_text("100.00 USDC"), repo, _FixedProvider("Infinity"), off)
+    assert r1.decision == "refused"
+    assert engine.INVALID_AMOUNT in r1.codes
+    assert r1.tx_plan is None
+
+    # Amount not in the raw text -> still cross-checked and refused.
+    r2 = pipeline.run(
+        _invoice_text("1,250.00 USDC"), repo, _FixedProvider("1500.00"), off
+    )
+    assert r2.decision == "refused"
+    assert pipeline.AMOUNT_MISMATCH in r2.codes
+    assert repo.intent_count() == 0
+
+
 def test_to_stroops_fails_closed_on_non_finite_and_overflow():
     assert pipeline.to_stroops("Infinity") is None
     assert pipeline.to_stroops("-Infinity") is None
