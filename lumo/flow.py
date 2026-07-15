@@ -30,7 +30,7 @@ def execute(
     chain_id = None
     try:
         result = client.create_intent(
-            sme=rules["sme_address"],
+            sme=config.sme_smart_account or rules["sme_address"],
             supplier=supplier["address"],
             token=row["token"],
             amount=int(row["amount"]),

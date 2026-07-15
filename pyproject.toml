@@ -10,13 +10,15 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2,<3",
     "httpx>=0.27,<1",
+    # Owner-signed create_intent through the policy-account (lumo/chain/
+    # smart_account.py) needs an SDK — the stellar CLI can't produce the
+    # contract's custom Ed25519Signature. Lazily imported; the mock/CLI paths
+    # never touch it.
+    "stellar-sdk>=15,<16",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
-# Only scripts/verify_policy_enforcement.py needs this; the app itself shells to
-# the `stellar` CLI and never imports an SDK.
-verify = ["stellar-sdk>=15,<16"]
 
 [tool.setuptools.packages.find]
 include = ["lumo*"]

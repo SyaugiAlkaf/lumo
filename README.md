@@ -341,6 +341,22 @@ was configured with an owner-signed authorization entry:
 | `set_escrow` (bind the one fundable escrow) | [`bca818b7…`](https://stellar.expert/explorer/testnet/tx/bca818b75843b22768acd4dcf0942cea58e2bbe9dcf63c5f5c206236232b13eb) |
 | `add_supplier` (approve the payee) | [`9bd11a5f…`](https://stellar.expert/explorer/testnet/tx/9bd11a5f1ba2a53affcbff11dfde0c4c282c5107e79dd6aa074cd18b158e4b57) |
 
+### Every payment flows through the smart account
+
+`create_intent` is routed through the policy-account, not a bare keypair. The
+escrow's `create_intent` calls `sme.require_auth()` and transfers the funds
+`from` the sme, so with `sme` = the policy-account **both** the intent and its
+funding transfer pass through `__check_auth` — the on-chain per-tx cap,
+approved-supplier allowlist, and recipient binding gate every real payment. The
+owner's ed25519 key signs the authorization; a compromised agent cannot forge
+it. This is `LUMO_SME_SMART_ACCOUNT` in `scripts/testnet_serve.sh`
+(`lumo/chain/smart_account.py`), enforced live on-chain:
+
+| Path | Transaction |
+|---|---|
+| approved supplier, in-cap → `__check_auth` passes, funds settle | [`42b9c73f…`](https://stellar.expert/explorer/testnet/tx/42b9c73f6c4761f7ddbc2db593934845e436e75c8b6edfe0f61acab9fda142c6) |
+| unapproved supplier / over-cap / wrong recipient → rejected on-chain | see the verifier below + [`928eb96d…`](https://stellar.expert/explorer/testnet/tx/928eb96dd7c19e9fcd768676e20bc342bc57a0a690578973a188b3e60885d773) |
+
 ### The money cannot be tricked — verify it yourself
 
 `scripts/verify_policy_enforcement.py` signs a **genuine owner authorization**
@@ -357,7 +373,7 @@ Even a correctly-signed instruction cannot move money outside policy — the
 enforcement lives in the deployed contract, not the agent. Reproduce with:
 
 ```bash
-pip install -e '.[verify]'
+pip install -e .
 export SME_SECRET=$(stellar keys show lumo-sme)
 export DEPLOYER_SECRET=$(stellar keys show lumo-deployer)
 python scripts/verify_policy_enforcement.py

@@ -32,8 +32,12 @@ class ChainAdapter(Protocol):
 
 
 class SorobanAdapter:
-    def __init__(self, client: SorobanClient):
+    def __init__(self, client: SorobanClient, smart_account_client=None):
         self.client = client
+        # When present, create_intent is owner-signed through the policy-account
+        # (attest/release/refund/reads stay on the CLI client — they need no
+        # smart-account auth).
+        self.smart_account_client = smart_account_client
 
     def deploy(self) -> str:
         raise NotImplementedError("soroban deploy is scripted: scripts/deploy_local.sh")
@@ -49,7 +53,8 @@ class SorobanAdapter:
         deadline: int,
         source: str | None = None,
     ) -> InvokeResult:
-        return self.client.create_intent(
+        client = self.smart_account_client or self.client
+        return client.create_intent(
             sme=sme,
             supplier=supplier,
             token=token,
@@ -108,9 +113,18 @@ class EvmAdapter:
 
 def build_chain_adapter(config: Config) -> ChainAdapter:
     if config.chain_adapter == "soroban":
-        return SorobanAdapter(
-            SorobanClient(config.escrow_id, network=config.network, source=config.sme_source)
-        )
+        cli = SorobanClient(config.escrow_id, network=config.network, source=config.sme_source)
+        smart_account_client = None
+        if config.sme_smart_account:
+            from lumo.chain.smart_account import SmartAccountClient
+
+            smart_account_client = SmartAccountClient(
+                escrow_id=config.escrow_id,
+                smart_account=config.sme_smart_account,
+                owner_source=config.sme_source,
+                network=config.network,
+            )
+        return SorobanAdapter(cli, smart_account_client=smart_account_client)
     if config.chain_adapter == "mock":
         from lumo.chain.mock_chain import MockChainAdapter
 

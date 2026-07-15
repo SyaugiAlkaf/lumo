@@ -15,6 +15,10 @@ PORT="${LUMO_TESTNET_PORT:-8790}"
 
 ESCROW_ID="${LUMO_ESCROW_ID:-CARKYFTVFVUX2Y3OZJUPYBBZKTVVIHC3APSFAQOVL6DGKWU6D6ZGJJMK}"
 USDC_SAC="${LUMO_USDC_SAC:-CDWS5VFOIDNU7X3O4CXNF2I5TMGT5RKLB4GDHU24VOO7FRGGI3XYTQC7}"
+# The policy-account smart account: create_intent is routed through it and
+# authorized by the sme owner key's __check_auth, so the on-chain cap +
+# approved-supplier + recipient binding gate every real payment.
+POLICY_ID="${LUMO_SME_SMART_ACCOUNT:-CD2EIG3V4TBGHSGLZYCIZRHVFVQFUA3NL2KG7SZFF3SIEGL7MMV4PF5L}"
 
 for key in lumo-deployer lumo-sme lumo-supplier; do
     stellar keys address "$key" >/dev/null 2>&1 \
@@ -50,10 +54,12 @@ export LUMO_ESCROW_ID="$ESCROW_ID"
 export LUMO_NETWORK="testnet"
 export LUMO_CHAIN_ADAPTER="soroban"
 export LUMO_SME_SOURCE="lumo-sme"
+export LUMO_SME_SMART_ACCOUNT="$POLICY_ID"
 export LUMO_ORACLE_SOURCE="lumo-deployer"
 export LUMO_ORACLE_ADDRESS="$DEPLOYER_ADDR"
 
 echo "lumo testnet tool -> http://127.0.0.1:$PORT/testnet"
 echo "network testnet · escrow $ESCROW_ID"
+echo "create_intent flows through policy-account $POLICY_ID (owner-signed __check_auth)"
 echo "signing: sme=lumo-sme oracle=lumo-deployer (keystore identities, testnet-only)"
 exec "$PY" -m lumo.ui.server --db "$DB" --port "$PORT"

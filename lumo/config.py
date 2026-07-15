@@ -48,6 +48,11 @@ class Config:
     escrow_id: str = ""
     network: str = "local"
     sme_source: str = "lumo-sme"
+    # When set (a policy-account contract address), create_intent is routed
+    # through that smart account and authorized by the sme_source owner key's
+    # __check_auth signature — putting the on-chain policy in every payment's
+    # money path. Empty = the legacy keypair path.
+    sme_smart_account: str = ""
     oracle_source: str = "lumo-oracle"
     oracle_address: str = ""
     chain_adapter: str = "soroban"

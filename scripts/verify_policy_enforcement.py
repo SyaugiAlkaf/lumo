@@ -21,7 +21,7 @@ Run:
     .venv/bin/python scripts/verify_policy_enforcement.py
 
 Exits non-zero if any transfer is authorized or rejected against expectation.
-Requires the `verify` extra: pip install -e '.[verify]'
+Requires the project installed (stellar-sdk): pip install -e .
 
 The default deployed policy-account already holds test USDC on testnet, so it
 runs as-is. Point it at your own deployment (POLICY_ID=...) and you must first
