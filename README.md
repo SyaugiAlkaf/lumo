@@ -6,6 +6,8 @@
 
 **The agent can be tricked. The money cannot.**
 
+**Live site:** [syaugialkaf.github.io/lumo](https://syaugialkaf.github.io/lumo/) · **Testnet contracts:** see [Testnet deployment](#testnet-deployment)
+
 On-device SME treasury agent for USDC on Soroban. An untrusted local LLM only
 reads invoices; a deterministic policy layer decides; two on-chain contracts
 enforce. Funds in escrow can structurally reach only the bound supplier (on a
