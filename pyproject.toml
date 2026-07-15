@@ -14,6 +14,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# Only scripts/verify_policy_enforcement.py needs this; the app itself shells to
+# the `stellar` CLI and never imports an SDK.
+verify = ["stellar-sdk>=15,<16"]
 
 [tool.setuptools.packages.find]
 include = ["lumo*"]

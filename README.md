@@ -341,6 +341,28 @@ was configured with an owner-signed authorization entry:
 | `set_escrow` (bind the one fundable escrow) | [`bca818b7…`](https://stellar.expert/explorer/testnet/tx/bca818b75843b22768acd4dcf0942cea58e2bbe9dcf63c5f5c206236232b13eb) |
 | `add_supplier` (approve the payee) | [`9bd11a5f…`](https://stellar.expert/explorer/testnet/tx/9bd11a5f1ba2a53affcbff11dfde0c4c282c5107e79dd6aa074cd18b158e4b57) |
 
+### The money cannot be tricked — verify it yourself
+
+`scripts/verify_policy_enforcement.py` signs a **genuine owner authorization**
+and asks the live deployed account to authorize three transfers, running each
+through enforce-mode simulation so the RPC actually invokes `__check_auth`:
+
+```
+[ok] wrong recipient, in-cap  -> RecipientNotAllowed   (money can't be redirected)
+[ok] bound escrow, over cap   -> OverCap                (money can't exceed the cap)
+[ok] bound escrow, in-cap     -> AUTHORIZED             (the legitimate payment)
+```
+
+Even a correctly-signed instruction cannot move money outside policy — the
+enforcement lives in the deployed contract, not the agent. Reproduce with:
+
+```bash
+pip install -e '.[verify]'
+export SME_SECRET=$(stellar keys show lumo-sme)
+export DEPLOYER_SECRET=$(stellar keys show lumo-deployer)
+python scripts/verify_policy_enforcement.py
+```
+
 Re-deploying is a deliberate, human-run action — `scripts/deploy_testnet.sh`
 prints the checklist and exits `1`; no gate, script, or Makefile target
 automates it.
