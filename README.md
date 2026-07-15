@@ -17,6 +17,46 @@ Yogyakarta, Indonesia. She pays overseas fabric suppliers in USDC and wants an
 agent that can read an invoice and propose a payment — without ever being able
 to send her money somewhere an attacker chose.
 
+## Quick start
+
+Everything below runs **offline in `mock` mode with no keys** — safe to try in under a minute.
+
+**Run the agent (CLI):**
+```bash
+git clone https://github.com/SyaugiAlkaf/lumo && cd lumo
+python -m venv .venv && .venv/bin/pip install -e .
+.venv/bin/python -m lumo.cli init                  # local DB + a seeded demo supplier
+printf 'INVOICE INV-1\nFrom: CV Batik Nusantara\nAmount due: 1,250.00 USDC\n' > invoice.txt
+.venv/bin/python -m lumo.cli propose invoice.txt   # -> decision + reason codes as JSON
+```
+
+**Embed it as an SDK (5 lines):**
+```python
+from lumo import LumoClient
+
+client = LumoClient()
+d = client.propose(open("invoice.txt").read())
+print(d.decision, d.codes)   # proposed | refused | held  +  the reason codes
+# a proposal carries the exact create_intent tx plan and an intent_id you can status() later
+```
+
+**Ship it as a microservice (Docker):**
+```bash
+docker compose up --build    # REST API on :8788, chain adapter in safe mock mode (no keys)
+curl -sX POST localhost:8788/v1/intents -H 'Content-Type: application/json' \
+  -d '{"invoice":"INVOICE INV-1\nFrom: CV Batik Nusantara\nAmount due: 1,250.00 USDC"}'
+```
+
+**Plug it into any AI agent (MCP):**
+```bash
+python -m lumo.mcp           # stdio MCP server: propose_payment · get_status · attest
+```
+
+To settle on **Stellar testnet**, add the `stellar` CLI + a keystore and set
+`LUMO_CHAIN_ADAPTER=soroban` — plus `LUMO_SME_SMART_ACCOUNT=<policy-account>` to
+gate every payment on-chain through the contract's `__check_auth`. Full options,
+language bindings, and trust tiers: [Integrate](#integrate) · [`docs/integration.md`](docs/integration.md).
+
 ## Architecture
 
 <p align="center">
