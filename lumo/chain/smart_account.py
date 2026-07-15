@@ -11,6 +11,7 @@ path uses stellar-sdk (imported lazily — the mock/CLI paths never need it).
 import hashlib
 import subprocess
 
+from lumo.chain import ChainSubmittedUnconfirmed
 from lumo.chain.soroban_client import InvokeResult
 
 _RPC = {"testnet": "https://soroban-testnet.stellar.org"}
@@ -108,14 +109,34 @@ class SmartAccountClient:
 
         resp = server.send_transaction(tx)
         if resp.status == SendTransactionStatus.ERROR:
+            # Rejected at submission — never entered the ledger, so no escrow was
+            # created and a retry is safe.
             raise RuntimeError(f"create_intent submit rejected: {resp.error_result_xdr}")
-        result = server.poll_transaction(resp.hash, max_attempts=40, sleep_strategy=lambda n: 1)
+
+        # A transaction is now in flight. From here, any inconclusive outcome must
+        # be treated as "the escrow MAY exist" (-> ChainSubmittedUnconfirmed) so
+        # the caller never releases the claim and re-submits a second escrow.
+        try:
+            result = server.poll_transaction(resp.hash, max_attempts=40, sleep_strategy=lambda n: 1)
+        except Exception as exc:
+            raise ChainSubmittedUnconfirmed(resp.hash, f"poll failed: {exc}") from exc
+
+        if result.status == GetTransactionStatus.NOT_FOUND:
+            raise ChainSubmittedUnconfirmed(resp.hash, "not confirmed within timeout")
         if result.status != GetTransactionStatus.SUCCESS:
+            # Mined and FAILED (e.g. __check_auth rejected) — the escrow was NOT
+            # created, so this is a clean refusal a retry can follow.
             raise RuntimeError(
                 f"create_intent rejected on-chain: {getattr(result, 'result_xdr', '')}"
             )
-        meta = x.TransactionMeta.from_xdr(result.result_meta_xdr)
-        soroban = meta.v4.soroban_meta if meta.v == 4 else meta.v3.soroban_meta
-        if soroban is None or soroban.return_value is None:
-            raise RuntimeError("create_intent succeeded but returned no intent id")
-        return InvokeResult(value=int(scval.to_native(soroban.return_value)), tx_hash=resp.hash)
+        # Confirmed success: the escrow exists. A parse failure past this point
+        # must NOT look like "no escrow" — reconcile against the tx instead.
+        try:
+            meta = x.TransactionMeta.from_xdr(result.result_meta_xdr)
+            soroban = meta.v4.soroban_meta if meta.v == 4 else meta.v3.soroban_meta
+            intent_id = int(scval.to_native(soroban.return_value))
+        except Exception as exc:
+            raise ChainSubmittedUnconfirmed(
+                resp.hash, f"escrow created but return value unreadable: {exc}"
+            ) from exc
+        return InvokeResult(value=intent_id, tx_hash=resp.hash)

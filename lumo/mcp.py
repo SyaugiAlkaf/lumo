@@ -105,6 +105,8 @@ def handle(request: dict, client: LumoClient) -> dict | None:
         return reply({"tools": TOOLS})
     if method == "tools/call":
         params = request.get("params", {})
+        if not isinstance(params, dict):
+            return error(-32602, "params must be an object")
         name = params.get("name")
         if name not in {tool["name"] for tool in TOOLS}:
             return error(-32602, f"unknown tool {name!r}")

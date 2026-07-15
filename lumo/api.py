@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from lumo.config import Config
 from lumo.models import PipelineResult
-from lumo.monitor.webhooks import HttpSink, WebhookDispatcher
+from lumo.monitor.webhooks import HttpSink, WebhookDispatcher, WebhookURLError
 from lumo.sdk import ATTEST_KINDS, LumoClient
 
 INTENT_PATH = re.compile(r"^/v1/intents/([^/]+)$")
@@ -190,7 +190,12 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return self._json(400, {"error": "url (string) is required"})
                 dispatcher = self._dispatcher()
                 if url not in dispatcher.urls:
-                    dispatcher.urls.append(url)
+                    try:
+                        dispatcher.register(url)
+                    except WebhookURLError:
+                        # register() runs the SSRF host/scheme validation; reject
+                        # a private/loopback/non-http target instead of storing it.
+                        return self._json(400, {"error": "invalid or disallowed webhook url"})
                 return self._json(200, {"urls": dispatcher.urls})
 
             match = ATTEST_PATH.match(self.path)

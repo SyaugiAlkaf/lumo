@@ -85,16 +85,46 @@ class InjectionGuard(Guard):
         return PASS
 
 
-def _amount_matches_text(amount_stroops: int, text: str) -> bool:
-    target = Decimal(amount_stroops) / STROOP
+# The payable field on an invoice. Binding the cross-check to the amount on one
+# of these labeled lines (not any number anywhere in the text) stops a compromised
+# extractor from inflating the payment to a decoy number planted in free text.
+_PAYMENT_LABEL_RE = re.compile(
+    r"\b(?:amount\s+due|amount\s+payable|balance\s+due|total\s+due|grand\s+total"
+    r"|total|jumlah|tagihan)\b\s*:?\s*([^\n]*)",
+    re.IGNORECASE,
+)
+
+
+def _amount_tokens(text: str):
     for token in _AMOUNT_TOKEN_RE.findall(text):
         try:
-            value = Decimal(token.replace(",", ""))
+            yield Decimal(token.replace(",", ""))
         except InvalidOperation:
             continue
-        if value == target:
-            return True
-    return False
+
+
+def _labeled_amounts(text: str) -> list[Decimal]:
+    amounts = []
+    for match in _PAYMENT_LABEL_RE.finditer(text):
+        token = _AMOUNT_TOKEN_RE.search(match.group(1))
+        if token:
+            try:
+                amounts.append(Decimal(token.group(0).replace(",", "")))
+            except InvalidOperation:
+                pass
+    return amounts
+
+
+def _amount_matches_text(amount_stroops: int, text: str) -> bool:
+    target = Decimal(amount_stroops) / STROOP
+    labeled = _labeled_amounts(text)
+    if labeled:
+        # A payable label is present: the extracted amount must BE one of the
+        # labeled amounts, not merely appear somewhere in the document.
+        return target in labeled
+    # No recognizable payable label — fall back to presence anywhere (best effort,
+    # so an unusually formatted but honest invoice still settles).
+    return target in set(_amount_tokens(text))
 
 
 class AmountCrossCheckGuard(Guard):

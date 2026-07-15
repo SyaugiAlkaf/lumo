@@ -83,6 +83,13 @@ class Config:
             raise ValueError(f"api_port {self.api_port} out of range (1-65535)")
         if int(self.k_of_n) < 1:
             raise ValueError(f"k_of_n must be >= 1, got {self.k_of_n}")
+        if int(self.deadline_secs) <= 0:
+            raise ValueError(f"deadline_secs must be > 0, got {self.deadline_secs}")
+        if self.mock_mode not in ("honest", "compromised"):
+            raise ValueError(f"unknown mock_mode {self.mock_mode!r}, expected honest|compromised")
+        # A whitespace-only env value must not silently route through the
+        # smart-account path (and then fail deep in the SDK).
+        self.sme_smart_account = self.sme_smart_account.strip()
 
     @classmethod
     def profile(cls, name: str, **overrides) -> "Config":

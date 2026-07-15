@@ -1,5 +1,5 @@
 from lumo.anchor.adapter import build_anchor
-from lumo.chain import ChainError, mapper
+from lumo.chain import ChainError, ChainSubmittedUnconfirmed, mapper
 from lumo.chain.adapter import ChainAdapter
 from lumo.chain.soroban_client import variant_of
 from lumo.config import Config
@@ -27,7 +27,6 @@ def execute(
 
     supplier = repo.supplier_by_id(row["supplier_id"])
     rules = repo.rules()
-    chain_id = None
     try:
         result = client.create_intent(
             sme=config.sme_smart_account or rules["sme_address"],
@@ -38,18 +37,27 @@ def execute(
             deadline=int(row["deadline"]),
             source=sme_source,
         )
-        chain_id = int(result.value)
-        # Persist the chain id + tx BEFORE confirming. If the confirm read fails,
-        # a retry reconciles against THIS escrow (via mapper.sync_status) instead
-        # of creating a second one — the escrow contract has no request_hash
-        # idempotency, so a re-submit would be a real double-escrow.
-        repo.set_chain_intent(intent_id, chain_id)
-        repo.add_chain_tx(intent_id, "create_intent", result.tx_hash)
-    except Exception:
-        # Only reopen for a clean retry if no on-chain escrow was created.
-        if chain_id is None:
-            repo.release_escrow_claim(intent_id)
+    except ChainSubmittedUnconfirmed as exc:
+        # A create_intent tx is in flight and MAY have funded the escrow. Persist
+        # the hash for reconciliation and keep the claim ('escrowed') — releasing
+        # it would let a retry submit a second create_intent (the escrow contract
+        # has no request_hash idempotency, so that is a real double-escrow).
+        if exc.tx_hash:
+            repo.add_chain_tx(intent_id, "create_intent", exc.tx_hash)
         raise
+    except Exception:
+        # create_intent raised before a tx entered the ledger -> no escrow was
+        # created, so it is safe to reopen for a clean retry.
+        repo.release_escrow_claim(intent_id)
+        raise
+
+    # create_intent returned a confirmed escrow. Record the tx hash FIRST (so a
+    # failure while writing the chain id still leaves a reconcilable pointer),
+    # then the chain id — both persisted before the confirmation read below, and
+    # never released once we are here.
+    chain_id = int(result.value)
+    repo.add_chain_tx(intent_id, "create_intent", result.tx_hash)
+    repo.set_chain_intent(intent_id, chain_id)
 
     # Chain-wins confirmation. On failure the claim + chain id stay put (no
     # re-create on retry); reconciliation is mapper.sync_status.
